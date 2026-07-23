@@ -6,10 +6,12 @@ import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import { RecordToolbar } from "./record-toolbar";
+import { DataLoadingState } from "./data-loading-state";
 
 export function SalesView() {
   const [query, setQuery] = useState("");
-  const [items, setItems] = useState(sales);
+  const [items, setItems] = useState(() => hasSupabaseConfig() ? [] : sales);
+  const [loading, setLoading] = useState(hasSupabaseConfig());
   useEffect(() => {
     if (!hasSupabaseConfig()) return;
     createClient()
@@ -18,8 +20,7 @@ export function SalesView() {
       .eq("status", "completed")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
-        if (!data) return;
-        setItems(
+        if (data) setItems(
           data.map((sale) => {
             const customer = Array.isArray(sale.customers) ? sale.customers[0] : sale.customers;
             const count = Array.isArray(sale.sale_items) ? sale.sale_items[0]?.count : 0;
@@ -34,20 +35,24 @@ export function SalesView() {
             };
           }),
         );
+        setLoading(false);
       });
   }, []);
   const filtered = useMemo(
     () => items.filter((sale) => `${sale.id} ${sale.customer} ${sale.method}`.toLowerCase().includes(query.toLowerCase())),
     [items, query],
   );
+  const revenue = items.reduce((sum, sale) => sum + sale.total, 0);
+
+  if (loading) return <DataLoadingState />;
 
   return (
     <>
       <section className="stat-strip">
-        <article className="card stat-tile"><p>June revenue</p><strong>$8,450.00</strong></article>
-        <article className="card stat-tile"><p>Sales recorded</p><strong>82</strong></article>
-        <article className="card stat-tile"><p>Average sale</p><strong>$103.05</strong></article>
-        <article className="card stat-tile"><p>Today</p><strong className="metric-positive">$186.00</strong></article>
+        <article className="card stat-tile"><p>Total revenue</p><strong>{formatMoney(revenue)}</strong></article>
+        <article className="card stat-tile"><p>Sales recorded</p><strong>{items.length}</strong></article>
+        <article className="card stat-tile"><p>Average sale</p><strong>{formatMoney(items.length ? revenue / items.length : 0)}</strong></article>
+        <article className="card stat-tile"><p>Latest sale</p><strong className="metric-positive">{formatMoney(items[0]?.total ?? 0)}</strong></article>
       </section>
       <RecordToolbar onChange={setQuery} placeholder="Search sale or customer" value={query} />
       <section className="card">

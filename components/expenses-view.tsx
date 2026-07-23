@@ -8,11 +8,13 @@ import { getCurrentBusinessId } from "@/lib/supabase/workspace";
 import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RecordToolbar } from "./record-toolbar";
+import { DataLoadingState } from "./data-loading-state";
 
 export function ExpensesView() {
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [items, setItems] = useState(expenses);
+  const [items, setItems] = useState(() => hasSupabaseConfig() ? [] : expenses);
+  const [loading, setLoading] = useState(hasSupabaseConfig());
   const [message, setMessage] = useState("");
   useEffect(() => {
     if (!hasSupabaseConfig()) return;
@@ -21,8 +23,7 @@ export function ExpensesView() {
       .select("id, description, amount, payment_method, expense_date, expense_categories(name)")
       .order("expense_date", { ascending: false })
       .then(({ data }) => {
-        if (!data) return;
-        setItems(
+        if (data) setItems(
           data.map((expense) => {
             const category = Array.isArray(expense.expense_categories)
               ? expense.expense_categories[0]
@@ -37,12 +38,19 @@ export function ExpensesView() {
             };
           }),
         );
+        setLoading(false);
       });
   }, []);
   const filtered = useMemo(
     () => items.filter((expense) => `${expense.description} ${expense.category} ${expense.method}`.toLowerCase().includes(query.toLowerCase())),
     [items, query],
   );
+  const expenseTotal = items.reduce((sum, expense) => sum + expense.amount, 0);
+  const largestExpense = items.reduce((largest, expense) =>
+    expense.amount > largest.amount ? expense : largest,
+  items[0] ?? { amount: 0, category: "None" });
+
+  if (loading) return <DataLoadingState />;
 
   async function addExpense(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,10 +98,10 @@ export function ExpensesView() {
   return (
     <>
       <section className="stat-strip">
-        <article className="card stat-tile"><p>June expenses</p><strong>$4,120.00</strong></article>
-        <article className="card stat-tile"><p>Entries</p><strong>24</strong></article>
-        <article className="card stat-tile"><p>Largest category</p><strong>Stock</strong></article>
-        <article className="card stat-tile"><p>Against May</p><strong style={{ color: "#0F766E" }}>-4.8%</strong></article>
+        <article className="card stat-tile"><p>Total expenses</p><strong>{formatMoney(expenseTotal)}</strong></article>
+        <article className="card stat-tile"><p>Entries</p><strong>{items.length}</strong></article>
+        <article className="card stat-tile"><p>Largest expense</p><strong>{largestExpense.category}</strong></article>
+        <article className="card stat-tile"><p>Largest amount</p><strong>{formatMoney(largestExpense.amount)}</strong></article>
       </section>
       <RecordToolbar onChange={setQuery} placeholder="Search expense or category" value={query} />
       {message && <p className="form-message form-message-success" style={{ marginBottom: 14 }}>{message}</p>}

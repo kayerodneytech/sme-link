@@ -8,12 +8,16 @@ import { getCurrentBusinessId } from "@/lib/supabase/workspace";
 import { PackagePlus, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RecordToolbar } from "./record-toolbar";
+import { DataLoadingState } from "./data-loading-state";
 
 export function InventoryView() {
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
-  const [items, setItems] = useState(initialProducts);
+  const [items, setItems] = useState(() =>
+    hasSupabaseConfig() ? [] : initialProducts,
+  );
+  const [loading, setLoading] = useState(hasSupabaseConfig());
   const [message, setMessage] = useState("");
   const products = useMemo(
     () =>
@@ -35,8 +39,8 @@ export function InventoryView() {
       .eq("is_archived", false)
       .order("name")
       .then(({ data }) => {
-        if (!active || !data) return;
-        setItems(
+        if (!active) return;
+        if (data) setItems(
           data.map((product) => {
             const stock = Number(product.quantity_on_hand);
             const threshold = Number(product.reorder_level);
@@ -57,11 +61,14 @@ export function InventoryView() {
             };
           }),
         );
+        setLoading(false);
       });
     return () => {
       active = false;
     };
   }, []);
+
+  if (loading) return <DataLoadingState />;
 
   async function addProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

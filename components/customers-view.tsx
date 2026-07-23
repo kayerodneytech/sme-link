@@ -8,11 +8,13 @@ import { getCurrentBusinessId } from "@/lib/supabase/workspace";
 import { Mail, Phone, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RecordToolbar } from "./record-toolbar";
+import { DataLoadingState } from "./data-loading-state";
 
 export function CustomersView() {
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [items, setItems] = useState(customers);
+  const [items, setItems] = useState(() => hasSupabaseConfig() ? [] : customers);
+  const [loading, setLoading] = useState(hasSupabaseConfig());
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -23,8 +25,7 @@ export function CustomersView() {
       .eq("is_archived", false)
       .order("name")
       .then(({ data }) => {
-        if (!data) return;
-        setItems(
+        if (data) setItems(
           data.map((customer) => ({
             id: customer.id,
             name: customer.name,
@@ -36,10 +37,13 @@ export function CustomersView() {
             spent: 0,
           })),
         );
+        setLoading(false);
       });
   }, []);
 
   const filtered = useMemo(() => items.filter((customer) => `${customer.name} ${customer.phone} ${customer.email}`.toLowerCase().includes(query.toLowerCase())), [items, query]);
+
+  if (loading) return <DataLoadingState />;
 
   async function addCustomer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

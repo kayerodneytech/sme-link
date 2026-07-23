@@ -12,6 +12,7 @@ import { getCurrentBusinessId } from "@/lib/supabase/workspace";
 import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RecordToolbar } from "./record-toolbar";
+import { DataLoadingState } from "./data-loading-state";
 
 function badge(status: string) {
   if (status === "Completed") return "badge-success";
@@ -24,13 +25,14 @@ export function OrdersView() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [showForm, setShowForm] = useState(false);
-  const [items, setItems] = useState(orders);
+  const [items, setItems] = useState(() => hasSupabaseConfig() ? [] : orders);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>(
-    sampleCustomers,
+    hasSupabaseConfig() ? [] : sampleCustomers,
   );
   const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>(
-    sampleProducts,
+    hasSupabaseConfig() ? [] : sampleProducts,
   );
+  const [loading, setLoading] = useState(hasSupabaseConfig());
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -57,10 +59,13 @@ export function OrdersView() {
       }
       if (customerResult.data) setCustomers(customerResult.data);
       if (productResult.data) setProducts(productResult.data.map((product) => ({ id: product.id, name: product.name, price: Number(product.selling_price) })));
+      setLoading(false);
     });
   }, []);
 
   const filtered = useMemo(() => items.filter((order) => (status === "All" || order.status === status) && `${order.id} ${order.customer}`.toLowerCase().includes(query.toLowerCase())), [items, query, status]);
+
+  if (loading) return <DataLoadingState />;
 
   async function addOrder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

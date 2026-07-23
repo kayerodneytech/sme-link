@@ -8,15 +8,19 @@ import { getCurrentBusinessId } from "@/lib/supabase/workspace";
 import { Check, LoaderCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { DataLoadingState } from "./data-loading-state";
 
 type Line = { productId: string; quantity: number };
 type ProductOption = { id: string; name: string; price: number; stock: number };
 type CustomerOption = { id: string; name: string };
 
 export function SaleForm() {
-  const [lines, setLines] = useState<Line[]>([{ productId: "p4", quantity: 1 }]);
-  const [productOptions, setProductOptions] = useState<ProductOption[]>(sampleProducts);
-  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>(sampleCustomers);
+  const [lines, setLines] = useState<Line[]>(() =>
+    hasSupabaseConfig() ? [{ productId: "", quantity: 1 }] : [{ productId: "p4", quantity: 1 }],
+  );
+  const [productOptions, setProductOptions] = useState<ProductOption[]>(() => hasSupabaseConfig() ? [] : sampleProducts);
+  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>(() => hasSupabaseConfig() ? [] : sampleCustomers);
+  const [loading, setLoading] = useState(hasSupabaseConfig());
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const total = useMemo(
@@ -57,12 +61,15 @@ export function SaleForm() {
       if (customerResult.data) {
         setCustomerOptions(customerResult.data);
       }
+      setLoading(false);
     });
   }, []);
 
   function updateLine(index: number, next: Partial<Line>) {
     setLines((current) => current.map((line, i) => i === index ? { ...line, ...next } : line));
   }
+
+  if (loading) return <DataLoadingState rows={3} />;
 
   async function completeSale(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
