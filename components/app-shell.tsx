@@ -4,7 +4,6 @@ import {
   BarChart3,
   Bell,
   Boxes,
-  ChevronDown,
   CircleDollarSign,
   ClipboardList,
   LayoutDashboard,
@@ -13,11 +12,11 @@ import {
   ReceiptText,
   Settings,
   ShoppingCart,
-  Store,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BusinessMenu } from "./business-menu";
 
 const mainItems = [
   { href: "/dashboard", label: "Dashboard", area: "dashboard", icon: LayoutDashboard },
@@ -49,6 +48,7 @@ export function AppShell({
   userRole = "Owner",
   demoMode = false,
   enabledAreas,
+  posEnabled = false,
 }: {
   children: React.ReactNode;
   businessName?: string;
@@ -56,6 +56,7 @@ export function AppShell({
   userRole?: string;
   demoMode?: boolean;
   enabledAreas?: string[];
+  posEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const visibleItems =
@@ -143,11 +144,7 @@ export function AppShell({
             <button className="icon-button" aria-label="Notifications">
               <Bell size={18} />
             </button>
-            <button className="button button-secondary desktop-only">
-              <Store size={17} />
-              Business
-              <ChevronDown size={15} />
-            </button>
+            <BusinessMenu posEnabled={posEnabled} />
           </div>
         </header>
         {children}

@@ -23,7 +23,7 @@ export default async function WorkspaceLayout({
 
   const { data: membership } = await supabase
     .from("business_members")
-    .select("role, businesses(name, location, primary_needs, tracks_inventory, sales_mode)")
+    .select("role, businesses(name, location, sector, primary_needs, tracks_inventory, sales_mode)")
     .eq("user_id", user.id)
     .eq("status", "active")
     .limit(1)
@@ -49,6 +49,7 @@ export default async function WorkspaceLayout({
           : []),
       ]}
       userRole={membership.role === "owner" ? "Owner" : "Staff"}
+      posEnabled={["retail", "wholesale", "hospitality"].includes(business?.sector ?? "") && business?.tracks_inventory}
     >
       {children}
     </AppShell>
