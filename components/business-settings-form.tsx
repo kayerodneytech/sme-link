@@ -372,7 +372,8 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
           <span>
             <strong>Track products and stock levels</strong>
             <small>
-              Enables inventory tools, low-stock warnings and retail POS.
+              Turn this on for shops that sell physical stock. Leave it off for
+              service businesses — you’ll manage services instead of products.
             </small>
           </span>
         </label>

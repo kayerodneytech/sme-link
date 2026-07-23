@@ -475,6 +475,12 @@ h2 {
   width: 100%;
 }
 
+textarea.input {
+  min-height: 96px;
+  padding: 12px;
+  resize: vertical;
+}
+
 .form-grid {
   display: grid;
   gap: 16px;
@@ -1075,6 +1081,14 @@ h2 {
     padding: 0 32px;
   }
 
+  .mobile-account-menu {
+    display: none;
+  }
+
+  .topbar-desktop-title {
+    display: block;
+  }
+
   .app-main {
     padding-bottom: 0;
   }
@@ -1339,18 +1353,55 @@ h2 {
   box-shadow: 0 14px 38px rgba(13, 36, 59, .14); display: grid; min-width: 245px;
   padding: 7px; position: absolute; right: 0; top: calc(100% + 8px); z-index: 50;
 }
-.business-menu-popover a {
+.business-menu-popover a,
+.account-menu-logout {
   align-items: center; border-radius: 9px; color: var(--navy); display: flex;
-  gap: 11px; padding: 11px; text-decoration: none;
+  gap: 11px; padding: 11px; text-decoration: none; width: 100%;
+  background: transparent; border: 0; cursor: pointer; font: inherit; text-align: left;
 }
-.business-menu-popover a:hover { background: var(--teal-soft); }
+.business-menu-popover a:hover,
+.account-menu-logout:hover { background: var(--teal-soft); }
 .business-menu-popover a[data-active="true"] {
   background: var(--teal-soft);
   color: var(--teal-dark);
 }
-.business-menu-popover span { display: grid; gap: 2px; }
-.business-menu-popover strong { font-size: .84rem; }
-.business-menu-popover small { color: var(--muted); font-size: .72rem; }
+.business-menu-popover span,
+.account-menu-logout span { display: grid; gap: 2px; }
+.business-menu-popover strong,
+.account-menu-logout strong { font-size: .84rem; }
+.business-menu-popover small,
+.account-menu-logout small { color: var(--muted); font-size: .72rem; }
+
+.account-menu { position: relative; }
+.account-menu-trigger {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+.account-menu-popover { left: 0; right: auto; }
+.topbar-desktop-title { display: none; }
+
+.sidebar-logout {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #d7e2eb;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  gap: 8px;
+  padding: 9px 12px;
+  width: 100%;
+}
+.sidebar-logout:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+}
 
 .settings-form { display: grid; gap: 16px; max-width: 920px; }
 .settings-check { margin-top: 18px; }

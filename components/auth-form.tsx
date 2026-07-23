@@ -384,7 +384,7 @@ export function AuthForm() {
           </div>
           <label className="check-row">
             <input checked={registration.tracksInventory} onChange={(event) => update("tracksInventory", event.target.checked)} type="checkbox" />
-            <span><strong>We keep products in stock</strong><small>Turn this off for a service-only business.</small></span>
+            <span><strong>We keep products in stock</strong><small>Turn this off for service businesses — you’ll manage services, not products.</small></span>
           </label>
           <div className="field">
             <label>Which currencies do you accept?</label>

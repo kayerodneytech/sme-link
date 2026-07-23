@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export default async function NewSalePage() {
+  let serviceMode = false;
+
   if (hasSupabaseConfig()) {
     const supabase = await createClient();
     const {
@@ -31,6 +33,7 @@ export default async function NewSalePage() {
         if (isPosEligible(business)) {
           redirect("/pos");
         }
+        serviceMode = !Boolean(business?.tracks_inventory);
       }
     }
   }
@@ -38,11 +41,15 @@ export default async function NewSalePage() {
   return (
     <div className="content">
       <PageHeading
-        description="Add the items sold and confirm how the customer paid."
+        description={
+          serviceMode
+            ? "Choose the service or tier sold and how the customer paid."
+            : "Add the items sold and confirm how the customer paid."
+        }
         eyebrow="New transaction"
-        title="Record a sale"
+        title={serviceMode ? "Record service sale" : "Record a sale"}
       />
-      <SaleForm />
+      <SaleForm serviceMode={serviceMode} />
     </div>
   );
 }

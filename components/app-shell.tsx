@@ -4,6 +4,7 @@ import {
   BarChart3,
   Bell,
   Boxes,
+  Briefcase,
   CircleDollarSign,
   ClipboardList,
   LayoutDashboard,
@@ -16,12 +17,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MobileAccountMenu, SidebarLogout } from "./account-menu";
 import { BusinessMenu } from "./business-menu";
 
 const mainItems = [
   { href: "/dashboard", label: "Dashboard", area: "dashboard", icon: LayoutDashboard },
   { href: "/sales", label: "Sales", area: "sales", icon: CircleDollarSign },
   { href: "/inventory", label: "Inventory", area: "inventory", icon: Boxes },
+  { href: "/services", label: "Services", area: "services", icon: Briefcase },
   { href: "/orders", label: "Orders", area: "orders", icon: ClipboardList },
   { href: "/expenses", label: "Expenses", area: "expenses", icon: ReceiptText },
   { href: "/customers", label: "Customers", area: "customers", icon: Users },
@@ -31,6 +34,7 @@ const mainItems = [
 const mobileIcons = {
   sales: ShoppingCart,
   inventory: Boxes,
+  services: Briefcase,
   orders: ClipboardList,
   expenses: ReceiptText,
   customers: Users,
@@ -52,6 +56,7 @@ export function AppShell({
   demoMode = false,
   enabledAreas,
   posEnabled = false,
+  tracksInventory = true,
 }: {
   children: React.ReactNode;
   businessName?: string;
@@ -60,6 +65,7 @@ export function AppShell({
   demoMode?: boolean;
   enabledAreas?: string[];
   posEnabled?: boolean;
+  tracksInventory?: boolean;
 }) {
   const pathname = usePathname();
   const visibleItems = (
@@ -68,7 +74,9 @@ export function AppShell({
           (item) =>
             item.area === "dashboard" || enabledAreas.includes(item.area),
         )
-      : mainItems
+      : mainItems.filter((item) =>
+          tracksInventory ? item.area !== "services" : item.area !== "inventory",
+        )
   ).map((item) =>
     item.area === "sales" && posEnabled
       ? { ...item, href: "/pos", label: "POS" }
@@ -84,9 +92,11 @@ export function AppShell({
         label:
           item.area === "inventory"
             ? "Stock"
-            : item.area === "sales" && posEnabled
-              ? "POS"
-              : item.label,
+            : item.area === "services"
+              ? "Services"
+              : item.area === "sales" && posEnabled
+                ? "POS"
+                : item.label,
         icon: mobileIcons[item.area as keyof typeof mobileIcons],
       })),
     { href: "/more", label: "More", icon: Menu },
@@ -133,19 +143,17 @@ export function AppShell({
           </Link>
         </nav>
 
-        <div className="sidebar-user">
-          <p className="list-title" style={{ color: "white" }}>
-            {businessName}
-          </p>
-          <p className="list-meta" style={{ color: "#9eb0bf" }}>
-            {userRole} workspace
-          </p>
-        </div>
+        <SidebarLogout businessName={businessName} userRole={userRole} />
       </aside>
 
       <main className="app-main">
         <header className="topbar">
-          <div>
+          <MobileAccountMenu
+            businessLocation={businessLocation}
+            businessName={businessName}
+            demoMode={demoMode}
+          />
+          <div className="topbar-desktop-title">
             <p className="list-title" style={{ marginBottom: 1 }}>
               {businessName}
             </p>

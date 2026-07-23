@@ -44,11 +44,14 @@ export default async function WorkspaceLayout({
       businessName={business?.name ?? "SME workspace"}
       enabledAreas={[
         ...(business?.primary_needs ?? []),
-        ...(business?.tracks_inventory ? ["inventory"] : []),
+        ...(business?.tracks_inventory ? ["inventory"] : ["services"]),
         ...(["orders", "both"].includes(business?.sales_mode ?? "")
           ? ["orders", "customers"]
           : []),
+        // Service businesses almost always need a customer list.
+        ...(!business?.tracks_inventory ? ["customers"] : []),
       ]}
+      tracksInventory={Boolean(business?.tracks_inventory)}
       userRole={membership.role === "owner" ? "Owner" : "Staff"}
       posEnabled={isPosEligible(business)}
     >

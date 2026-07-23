@@ -1,10 +1,10 @@
 import { PageHeading } from "@/components/page-heading";
-import { InventoryView } from "@/components/inventory-view";
+import { ServicesView } from "@/components/services-view";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-export default async function InventoryPage() {
+export default async function ServicesPage() {
   if (hasSupabaseConfig()) {
     const supabase = await createClient();
     const {
@@ -24,8 +24,8 @@ export default async function InventoryPage() {
           .select("tracks_inventory")
           .eq("id", membership.business_id)
           .maybeSingle();
-        if (business && !business.tracks_inventory) {
-          redirect("/services");
+        if (business?.tracks_inventory) {
+          redirect("/inventory");
         }
       }
     }
@@ -34,11 +34,11 @@ export default async function InventoryPage() {
   return (
     <div className="content">
       <PageHeading
-        description="Add what you sell, group it simply, and keep track of how many you have."
-        eyebrow="Stock"
-        title="Products and stock"
+        description="What customers hire or book from you — with optional price tiers."
+        eyebrow="Offerings"
+        title="Services"
       />
-      <InventoryView />
+      <ServicesView />
     </div>
   );
 }

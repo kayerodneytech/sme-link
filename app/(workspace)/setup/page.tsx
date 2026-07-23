@@ -130,10 +130,23 @@ export default async function SetupPage() {
       step.key === "products" && !setup.tracksInventory
         ? {
             ...step,
-            title: "Add what you sell",
-            copy: "Add the services or products customers buy from the business.",
+            title: "Add your services",
+            copy: "Add what customers hire or book — with a description and optional price tiers.",
+            action: "Add services",
+            href: "/services",
           }
-        : step,
+        : step.key === "customers" && !setup.tracksInventory
+          ? {
+              ...step,
+              title: "Save a customer",
+              copy: "Keep company, phone and email so repeat jobs are easier to follow up.",
+            }
+          : step.key === "expenses" && !setup.tracksInventory
+            ? {
+                ...step,
+                copy: "Add rent, transport, tools or other running costs to see where money goes.",
+              }
+            : step,
     );
   const completed = availableSteps.filter((step) => setup.progress[step.key]).length;
 
