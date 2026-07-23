@@ -23,6 +23,12 @@ export type BusinessOverview = {
   revenue: number;
   expenses: number;
   netCashFlow: number;
+  /** What the sold stock cost you this month. */
+  costOfGoods: number;
+  /** Money left from sales after stock cost, before other expenses. */
+  salesProfit: number;
+  /** Sales profit minus recorded expenses. */
+  estimatedTakeHome: number;
   previousRevenue: number;
   lowStock: {
     id: string;
@@ -47,11 +53,16 @@ export type BusinessOverview = {
 function mockOverview(): BusinessOverview {
   const current = monthlyPerformance.at(-1)!;
   const previous = monthlyPerformance.at(-2)!;
+  const costOfGoods = Math.round(current.revenue * 0.62);
+  const salesProfit = current.revenue - costOfGoods;
   return {
     source: "mock",
     revenue: current.revenue,
     expenses: current.expenses,
     netCashFlow: current.revenue - current.expenses,
+    costOfGoods,
+    salesProfit,
+    estimatedTakeHome: salesProfit - current.expenses,
     previousRevenue: previous.revenue,
     lowStock: mockProducts
       .filter((product) => product.stock <= product.threshold)
@@ -158,7 +169,9 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
         .in("status", ["pending", "confirmed"]),
       supabase
         .from("sale_items")
-        .select("quantity, products!inner(name, business_id), sales!inner(status)")
+        .select(
+          "quantity, unit_price, products!inner(name, business_id, cost_price), sales!inner(status, completed_at)",
+        )
         .eq("products.business_id", businessId)
         .eq("sales.status", "completed"),
     ]);
@@ -195,14 +208,29 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
   }
 
   const productTotals = new Map<string, number>();
+  const currentKey = months.at(-1)!.key;
+  let costOfGoods = 0;
+  let salesProfit = 0;
+
   for (const item of itemsResult.data ?? []) {
     const relation = Array.isArray(item.products) ? item.products[0] : item.products;
+    const sale = Array.isArray(item.sales) ? item.sales[0] : item.sales;
     if (!relation?.name) continue;
     productTotals.set(
       relation.name,
       (productTotals.get(relation.name) ?? 0) + Number(item.quantity),
     );
+
+    if (!sale?.completed_at) continue;
+    if (monthKey(new Date(sale.completed_at)) !== currentKey) continue;
+
+    const quantity = Number(item.quantity);
+    const lineRevenue = quantity * Number(item.unit_price);
+    const lineCost = quantity * Number(relation.cost_price ?? 0);
+    costOfGoods += lineCost;
+    salesProfit += lineRevenue - lineCost;
   }
+
   const bestSellerEntry = [...productTotals.entries()].sort((a, b) => b[1] - a[1])[0];
 
   const current = months.at(-1)!;
@@ -229,6 +257,9 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
     revenue: current.revenue,
     expenses: current.expenses,
     netCashFlow: current.revenue - current.expenses,
+    costOfGoods,
+    salesProfit,
+    estimatedTakeHome: salesProfit - current.expenses,
     previousRevenue: previous.revenue,
     lowStock: (stockResult.data ?? [])
       .filter(

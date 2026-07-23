@@ -579,6 +579,89 @@ h2 {
   margin-top: 24px;
 }
 
+.dialog-wide {
+  max-width: 760px;
+}
+
+.inline-add {
+  display: flex;
+  gap: 10px;
+}
+
+.inline-add .input {
+  flex: 1;
+}
+
+.group-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.group-row {
+  align-items: center;
+  background: #f7f9fb;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.pricing-panel {
+  background: #f7faf9;
+  border: 1px solid #d7e8e4;
+  border-radius: 14px;
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.pricing-panel h3 {
+  color: var(--navy-deep);
+  font-size: 1rem;
+  margin: 0 0 6px;
+}
+
+.pricing-panel > p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0 0 14px;
+}
+
+.pricing-result {
+  background: white;
+  border: 1px solid #d7e8e4;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+}
+
+.text-button {
+  background: none;
+  border: 0;
+  color: var(--teal);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  padding: 0;
+  text-decoration: underline;
+}
+
+@media (min-width: 720px) {
+  .dialog {
+    border-radius: 18px;
+    max-height: 88vh;
+  }
+
+  .dialog-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
 .notice {
   align-items: flex-start;
   background: var(--teal-soft);

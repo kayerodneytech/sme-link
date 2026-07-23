@@ -68,3 +68,21 @@ test("VAT-inclusive totals split net and tax", () => {
 test("cash change is the amount returned to the customer", () => {
   assert.equal(calculateChange(42.5, 50), 7.5);
 });
+
+function unitCostFromPack(piecesInPack, paidForPack) {
+  if (!Number.isFinite(piecesInPack) || piecesInPack <= 0) return 0;
+  if (!Number.isFinite(paidForPack) || paidForPack < 0) return 0;
+  return roundMoney(paidForPack / piecesInPack);
+}
+
+function profitPerPiece(sellEachFor, unitCost) {
+  return roundMoney(sellEachFor - unitCost);
+}
+
+test("pack buying turns a crate price into cost per piece", () => {
+  assert.equal(unitCostFromPack(50, 20), 0.4);
+});
+
+test("profit per piece is sell price minus what it cost you", () => {
+  assert.equal(profitPerPiece(0.8, 0.4), 0.4);
+});
