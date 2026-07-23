@@ -126,11 +126,14 @@ begin
 end;
 $$;
 
-revoke all on function public.create_business(
-  text, text, text, text, text, text, text, text[], boolean, text[]
-) from public;
+-- Drop every known create_business signature. Databases may only have one of
+-- these depending on which earlier migrations were applied.
+drop function if exists public.create_business(text, text, text, text, text);
 drop function if exists public.create_business(
   text, text, text, text, text, text, text, text[], boolean, text[]
+);
+drop function if exists public.create_business(
+  text, text, text, text, text, text, text, text[], boolean, text[], numeric
 );
 
 create function public.create_business(
