@@ -1,10 +1,10 @@
 export const products = [
-  { id: "p1", name: "Cooking oil 2L", sku: "OIL-2L", category: "Groceries", price: 6.5, stock: 3, threshold: 5, status: "Low stock" },
-  { id: "p2", name: "Maize meal 10kg", sku: "MEAL-10", category: "Groceries", price: 9.8, stock: 4, threshold: 8, status: "Low stock" },
-  { id: "p3", name: "Brown sugar 2kg", sku: "SUG-2KG", category: "Groceries", price: 4.2, stock: 2, threshold: 6, status: "Low stock" },
-  { id: "p4", name: "Rice 2kg", sku: "RICE-2", category: "Groceries", price: 5.25, stock: 18, threshold: 6, status: "In stock" },
-  { id: "p5", name: "Laundry soap", sku: "SOAP-L", category: "Household", price: 2.1, stock: 26, threshold: 10, status: "In stock" },
-  { id: "p6", name: "Long-life milk 1L", sku: "MILK-1", category: "Dairy", price: 1.75, stock: 14, threshold: 8, status: "In stock" },
+  { id: "p1", name: "Cooking oil 2L", sku: "OIL-2L", barcode: "", category: "Groceries", productType: "stocked", unit: "bottle", packSize: 1, cost: 5.1, price: 6.5, stock: 3, threshold: 5, status: "Low stock" },
+  { id: "p2", name: "Maize meal 10kg", sku: "MEAL-10", barcode: "", category: "Groceries", productType: "stocked", unit: "bag", packSize: 1, cost: 8.2, price: 9.8, stock: 4, threshold: 8, status: "Low stock" },
+  { id: "p3", name: "Brown sugar 2kg", sku: "SUG-2KG", barcode: "", category: "Groceries", productType: "stocked", unit: "packet", packSize: 1, cost: 3.4, price: 4.2, stock: 2, threshold: 6, status: "Low stock" },
+  { id: "p4", name: "Rice 2kg", sku: "RICE-2", barcode: "", category: "Groceries", productType: "stocked", unit: "packet", packSize: 1, cost: 4.1, price: 5.25, stock: 18, threshold: 6, status: "In stock" },
+  { id: "p5", name: "Laundry soap", sku: "SOAP-L", barcode: "", category: "Household", productType: "stocked", unit: "bar", packSize: 1, cost: 1.55, price: 2.1, stock: 26, threshold: 10, status: "In stock" },
+  { id: "p6", name: "Long-life milk 1L", sku: "MILK-1", barcode: "", category: "Dairy", productType: "stocked", unit: "carton", packSize: 1, cost: 1.3, price: 1.75, stock: 14, threshold: 8, status: "In stock" },
 ];
 
 export const sales = [

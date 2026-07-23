@@ -31,7 +31,7 @@ export function InventoryView() {
     const supabase = createClient();
     supabase
       .from("product_stock")
-      .select("id, name, sku, category, selling_price, reorder_level, quantity_on_hand")
+      .select("id, name, sku, barcode, category, product_type, unit, pack_size, cost_price, selling_price, reorder_level, quantity_on_hand")
       .eq("is_archived", false)
       .order("name")
       .then(({ data }) => {
@@ -44,7 +44,12 @@ export function InventoryView() {
               id: product.id,
               name: product.name,
               sku: product.sku ?? "—",
+              barcode: product.barcode ?? "",
               category: product.category ?? "Uncategorised",
+              productType: product.product_type,
+              unit: product.unit,
+              packSize: Number(product.pack_size),
+              cost: Number(product.cost_price),
               price: Number(product.selling_price),
               stock,
               threshold,
@@ -63,7 +68,12 @@ export function InventoryView() {
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name") ?? "");
     const sku = String(form.get("sku") ?? "");
+    const barcode = String(form.get("barcode") ?? "");
     const category = String(form.get("category") ?? "");
+    const productType = String(form.get("productType") ?? "stocked");
+    const unit = String(form.get("unit") ?? "item");
+    const packSize = Number(form.get("packSize") ?? 1);
+    const cost = Number(form.get("cost") ?? 0);
     const price = Number(form.get("price") ?? 0);
     const threshold = Number(form.get("threshold") ?? 0);
     const openingStock = Number(form.get("openingStock") ?? 0);
@@ -75,7 +85,12 @@ export function InventoryView() {
           id: crypto.randomUUID(),
           name,
           sku: sku || "—",
+          barcode,
           category: category || "Uncategorised",
+          productType,
+          unit,
+          packSize,
+          cost,
           price,
           threshold,
           stock: openingStock,
@@ -96,14 +111,19 @@ export function InventoryView() {
           business_id: businessId,
           name,
           sku: sku || null,
+          barcode: barcode || null,
           category: category || null,
+          product_type: productType,
+          unit,
+          pack_size: packSize,
+          cost_price: cost,
           selling_price: price,
           reorder_level: threshold,
         })
         .select("id")
         .single();
       if (error) throw error;
-      if (openingStock > 0) {
+      if (productType === "stocked" && openingStock > 0) {
         const { error: stockError } = await supabase
           .from("inventory_movements")
           .insert({
@@ -164,10 +184,10 @@ export function InventoryView() {
   return (
     <>
       <section className="stat-strip">
-        <article className="card stat-tile"><p>Products</p><strong>6</strong></article>
-        <article className="card stat-tile"><p>Units in stock</p><strong>67</strong></article>
-        <article className="card stat-tile"><p>Stock value</p><strong>$298.50</strong></article>
-        <article className="card stat-tile"><p>Low-stock items</p><strong style={{ color: "#D97706" }}>3</strong></article>
+        <article className="card stat-tile"><p>Products and services</p><strong>{items.length}</strong></article>
+        <article className="card stat-tile"><p>Stock on hand</p><strong>{items.filter((item) => item.productType === "stocked").reduce((sum, item) => sum + item.stock, 0)}</strong></article>
+        <article className="card stat-tile"><p>Stock cost value</p><strong>{formatMoney(items.reduce((sum, item) => sum + item.cost * item.stock, 0))}</strong></article>
+        <article className="card stat-tile"><p>Low-stock products</p><strong style={{ color: "#D97706" }}>{items.filter((item) => item.productType === "stocked" && item.stock <= item.threshold).length}</strong></article>
       </section>
 
       <RecordToolbar onChange={setQuery} placeholder="Search products or SKU" value={query}>
@@ -183,16 +203,17 @@ export function InventoryView() {
       <section className="card">
         <div className="table-wrap desktop-only">
           <table className="data-table">
-            <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th></tr></thead>
+            <thead><tr><th>Product</th><th>Code</th><th>Category</th><th>Cost</th><th>Selling price</th><th>Stock</th><th>Status</th></tr></thead>
             <tbody>
               {products.map((product) => (
                 <tr key={product.id}>
                   <td className="table-name">{product.name}</td>
                   <td>{product.sku}</td>
                   <td>{product.category}</td>
+                  <td>{formatMoney(product.cost)}</td>
                   <td>{formatMoney(product.price)}</td>
-                  <td>{product.stock} units</td>
-                  <td><span className={`badge ${product.status === "Low stock" ? "badge-warning" : "badge-success"}`}>{product.status}</span></td>
+                  <td>{product.productType === "service" ? "Not tracked" : `${product.stock} ${product.unit}`}</td>
+                  <td><span className={`badge ${product.status === "Low stock" && product.productType === "stocked" ? "badge-warning" : "badge-success"}`}>{product.productType === "service" ? "Service" : product.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -209,7 +230,7 @@ export function InventoryView() {
                 <span className={`badge ${product.status === "Low stock" ? "badge-warning" : "badge-success"}`}>{product.status}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 15 }}>
-                <span className="list-meta">{product.stock} units available</span>
+                <span className="list-meta">{product.productType === "service" ? "Stock not tracked" : `${product.stock} ${product.unit} available`}</span>
                 <strong>{formatMoney(product.price)}</strong>
               </div>
             </article>
@@ -225,7 +246,7 @@ export function InventoryView() {
               <button className="icon-button" aria-label="Close" onClick={() => setShowForm(false)} type="button"><X size={18} /></button>
             </div>
             <div className="form-grid">
-              <div className="field"><label htmlFor="movement-product">Product</label><select className="select" id="movement-product" name="productId" required><option value="">Choose a product</option>{items.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+              <div className="field"><label htmlFor="movement-product">Product</label><select className="select" id="movement-product" name="productId" required><option value="">Choose a product</option>{items.filter((p) => p.productType === "stocked").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
               <div className="field"><label htmlFor="movement-type">Movement type</label><select className="select" id="movement-type" name="movementType" required><option value="stock_received">Stock received</option><option value="adjustment">Positive adjustment</option><option value="damaged">Damaged stock</option><option value="customer_return">Customer return</option></select></div>
               <div className="field"><label htmlFor="movement-quantity">Quantity</label><input className="input" id="movement-quantity" min="0.001" name="quantity" required step="0.001" type="number" /></div>
               <div className="field"><label htmlFor="movement-reference">Reference or note</label><input className="input" id="movement-reference" name="note" placeholder="e.g. Supplier delivery 184" /></div>
@@ -243,8 +264,13 @@ export function InventoryView() {
             </div>
             <div className="form-grid">
               <div className="field"><label htmlFor="product-name">Product name</label><input className="input" id="product-name" name="name" required /></div>
-              <div className="field"><label htmlFor="product-sku">SKU</label><input className="input" id="product-sku" name="sku" /></div>
+              <div className="field"><label htmlFor="product-type">What are you selling?</label><select className="select" id="product-type" name="productType"><option value="stocked">A product I keep in stock</option><option value="service">A service</option></select></div>
+              <div className="field"><label htmlFor="product-sku">SKU or product code</label><input className="input" id="product-sku" name="sku" /></div>
+              <div className="field"><label htmlFor="product-barcode">Barcode (optional)</label><input className="input" id="product-barcode" name="barcode" /></div>
               <div className="field"><label htmlFor="product-category">Category</label><input className="input" id="product-category" name="category" /></div>
+              <div className="field"><label htmlFor="product-unit">How is it counted?</label><input className="input" defaultValue="item" id="product-unit" name="unit" placeholder="item, box, bag, kg or litre" required /></div>
+              <div className="field"><label htmlFor="product-pack-size">Items in one pack</label><input className="input" defaultValue="1" id="product-pack-size" min="0.001" name="packSize" required step="0.001" type="number" /></div>
+              <div className="field"><label htmlFor="product-cost">Cost price</label><input className="input" defaultValue="0" id="product-cost" min="0" name="cost" required step="0.01" type="number" /></div>
               <div className="field"><label htmlFor="product-price">Selling price</label><input className="input" id="product-price" min="0" name="price" required step="0.01" type="number" /></div>
               <div className="field"><label htmlFor="product-threshold">Low-stock threshold</label><input className="input" defaultValue="5" id="product-threshold" min="0" name="threshold" required step="0.001" type="number" /></div>
               <div className="field"><label htmlFor="product-opening-stock">Opening stock</label><input className="input" defaultValue="0" id="product-opening-stock" min="0" name="openingStock" step="0.001" type="number" /></div>

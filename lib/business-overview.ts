@@ -207,7 +207,6 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
 
   const current = months.at(-1)!;
   const previous = months.at(-2)!;
-  const currentKey = current.key;
   const recentSales = (salesResult.data ?? []).slice(0, 3).map((sale) => ({
     id: sale.id,
     label: `Sale #${sale.sale_number}`,

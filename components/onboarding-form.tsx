@@ -13,7 +13,7 @@ export function OnboardingForm() {
     event.preventDefault();
     setError("");
     if (!hasSupabaseConfig()) {
-      setError("Connect Supabase before creating a business workspace.");
+      window.location.assign("/setup");
       return;
     }
 
@@ -33,7 +33,7 @@ export function OnboardingForm() {
       setError(rpcError.message);
       return;
     }
-    window.location.assign("/dashboard");
+    window.location.assign("/setup");
   }
 
   return (

@@ -198,6 +198,9 @@ create index expenses_business_date_idx on public.expenses(business_id, expense_
 create index orders_business_date_idx on public.orders(business_id, created_at desc);
 create index order_items_order_idx on public.order_items(order_id);
 create index notifications_user_date_idx on public.notifications(user_id, created_at desc);
+create unique index notifications_one_open_entity_idx
+  on public.notifications(business_id, notification_type, entity_type, entity_id)
+  where read_at is null and entity_id is not null;
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -245,6 +248,66 @@ create trigger expenses_set_created_by before insert on public.expenses
 for each row execute function public.set_created_by();
 create trigger orders_set_created_by before insert on public.orders
 for each row execute function public.set_created_by();
+
+create or replace function public.update_low_stock_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  product_record public.products%rowtype;
+  stock_on_hand numeric(12, 3);
+begin
+  select * into product_record
+  from public.products
+  where id = new.product_id;
+
+  if product_record.product_type <> 'stocked' then
+    return new;
+  end if;
+
+  select coalesce(sum(quantity_change), 0)
+  into stock_on_hand
+  from public.inventory_movements
+  where product_id = new.product_id;
+
+  if stock_on_hand <= product_record.reorder_level then
+    insert into public.notifications (
+      business_id, notification_type, title, message, entity_type, entity_id
+    )
+    values (
+      product_record.business_id,
+      'low_stock',
+      'Low stock: ' || product_record.name,
+      stock_on_hand || ' ' || product_record.unit ||
+        ' remaining. Your restock level is ' || product_record.reorder_level || '.',
+      'product',
+      product_record.id
+    )
+    on conflict (business_id, notification_type, entity_type, entity_id)
+      where read_at is null and entity_id is not null
+    do update set
+      title = excluded.title,
+      message = excluded.message,
+      created_at = now();
+  else
+    update public.notifications
+    set read_at = now()
+    where business_id = product_record.business_id
+      and notification_type = 'low_stock'
+      and entity_type = 'product'
+      and entity_id = product_record.id
+      and read_at is null;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger inventory_update_low_stock_notification
+after insert on public.inventory_movements
+for each row execute function public.update_low_stock_notification();
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -397,7 +460,7 @@ begin
   end if;
 
   for item in
-    select si.product_id, si.quantity, p.business_id, p.name
+    select si.product_id, si.quantity, p.business_id, p.name, p.product_type
     from public.sale_items si
     join public.products p on p.id = si.product_id
     where si.sale_id = target_sale_id
@@ -407,13 +470,15 @@ begin
       raise exception 'A sale item belongs to another business';
     end if;
 
-    select coalesce(sum(quantity_change), 0)
-    into available_stock
-    from public.inventory_movements
-    where product_id = item.product_id;
+    if item.product_type = 'stocked' then
+      select coalesce(sum(quantity_change), 0)
+      into available_stock
+      from public.inventory_movements
+      where product_id = item.product_id;
 
-    if available_stock < item.quantity then
-      raise exception 'Not enough stock for %', item.name;
+      if available_stock < item.quantity then
+        raise exception 'Not enough stock for %', item.name;
+      end if;
     end if;
   end loop;
 
@@ -435,7 +500,9 @@ begin
     'Completed sale',
     auth.uid()
   from public.sale_items si
-  where si.sale_id = target_sale_id;
+  join public.products p on p.id = si.product_id
+  where si.sale_id = target_sale_id
+    and p.product_type = 'stocked';
 
   update public.sales
   set
