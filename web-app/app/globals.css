@@ -260,6 +260,8 @@ h2 {
 
 .chart-wrap {
   height: 250px;
+  min-height: 250px;
+  min-width: 0;
   width: 100%;
 }
 

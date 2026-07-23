@@ -41,7 +41,19 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  businessName = "Tariro Foods",
+  businessLocation = "Harare, Zimbabwe",
+  userRole = "Owner",
+  demoMode = false,
+}: {
+  children: React.ReactNode;
+  businessName?: string;
+  businessLocation?: string;
+  userRole?: string;
+  demoMode?: boolean;
+}) {
   const pathname = usePathname();
 
   return (
@@ -87,10 +99,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="sidebar-user">
           <p className="list-title" style={{ color: "white" }}>
-            Tariro Foods
+            {businessName}
           </p>
           <p className="list-meta" style={{ color: "#9eb0bf" }}>
-            Owner workspace
+            {userRole} workspace
           </p>
         </div>
       </aside>
@@ -99,9 +111,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="topbar">
           <div>
             <p className="list-title" style={{ marginBottom: 1 }}>
-              Tariro Foods
+              {businessName}
             </p>
-            <p className="list-meta">Harare, Zimbabwe</p>
+            <p className="list-meta">
+              {demoMode ? "Demo workspace" : businessLocation}
+            </p>
           </div>
           <div style={{ alignItems: "center", display: "flex", gap: 9 }}>
             <button className="icon-button" aria-label="Notifications">

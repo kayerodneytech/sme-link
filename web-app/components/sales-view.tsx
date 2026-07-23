@@ -2,14 +2,43 @@
 
 import { formatDate, formatMoney } from "@/lib/format";
 import { sales } from "@/lib/sample-data";
-import { useMemo, useState } from "react";
+import { hasSupabaseConfig } from "@/lib/supabase/config";
+import { createClient } from "@/lib/supabase/client";
+import { useEffect, useMemo, useState } from "react";
 import { RecordToolbar } from "./record-toolbar";
 
 export function SalesView() {
   const [query, setQuery] = useState("");
+  const [items, setItems] = useState(sales);
+  useEffect(() => {
+    if (!hasSupabaseConfig()) return;
+    createClient()
+      .from("sales")
+      .select("id, sale_number, created_at, payment_method, total, status, customers(name), sale_items(count)")
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        setItems(
+          data.map((sale) => {
+            const customer = Array.isArray(sale.customers) ? sale.customers[0] : sale.customers;
+            const count = Array.isArray(sale.sale_items) ? sale.sale_items[0]?.count : 0;
+            return {
+              id: `SL-${String(sale.sale_number).padStart(4, "0")}`,
+              customer: customer?.name ?? "Walk-in customer",
+              date: sale.created_at,
+              items: Number(count ?? 0),
+              method: String(sale.payment_method).replace("_", " "),
+              total: Number(sale.total),
+              status: "Completed",
+            };
+          }),
+        );
+      });
+  }, []);
   const filtered = useMemo(
-    () => sales.filter((sale) => `${sale.id} ${sale.customer} ${sale.method}`.toLowerCase().includes(query.toLowerCase())),
-    [query],
+    () => items.filter((sale) => `${sale.id} ${sale.customer} ${sale.method}`.toLowerCase().includes(query.toLowerCase())),
+    [items, query],
   );
 
   return (

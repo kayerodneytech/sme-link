@@ -1,11 +1,12 @@
 import { PageHeading } from "@/components/page-heading";
 import { CashFlowBars, ExpensePie } from "@/components/report-charts";
-import { Download, TrendingUp } from "lucide-react";
+import { ExportReportButton } from "@/components/export-report-button";
+import { TrendingUp } from "lucide-react";
 
 export default function ReportsPage() {
   return (
     <div className="content">
-      <PageHeading action={<button className="button button-secondary"><Download size={17} /> Export CSV</button>} description="Use recorded transactions to understand financial and stock performance." eyebrow="Decision support" title="Reports" />
+      <PageHeading action={<ExportReportButton />} description="Use recorded transactions to understand financial and stock performance." eyebrow="Decision support" title="Reports" />
       <section className="summary-grid">
         <article className="card summary-card"><p className="summary-label">Six-month revenue</p><p className="summary-value">$36,550</p><p className="trend"><TrendingUp size={14} /> 14.2% average growth</p></article>
         <article className="card summary-card"><p className="summary-label">Six-month expenses</p><p className="summary-value">$20,370</p><p className="trend">55.7% of revenue</p></article>
