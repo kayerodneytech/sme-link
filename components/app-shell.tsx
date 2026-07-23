@@ -165,7 +165,9 @@ export function AppShell({
             <button className="icon-button" aria-label="Notifications">
               <Bell size={18} />
             </button>
-            <BusinessMenu mode="business" posEnabled={posEnabled} />
+            {posEnabled && (
+              <BusinessMenu mode="business" posEnabled={posEnabled} />
+            )}
           </div>
         </header>
         {children}
