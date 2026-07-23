@@ -35,6 +35,9 @@ export function MobileAccountMenu({
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
+        <span className="account-menu-icon" aria-hidden="true">
+          <Menu size={20} />
+        </span>
         <span className="account-menu-copy">
           <p className="list-title" style={{ marginBottom: 1 }}>
             {businessName}
@@ -42,9 +45,6 @@ export function MobileAccountMenu({
           <p className="list-meta">
             {demoMode ? "Demo workspace" : businessLocation}
           </p>
-        </span>
-        <span className="account-menu-icon" aria-hidden="true">
-          <Menu size={20} />
         </span>
       </button>
       {open && (
