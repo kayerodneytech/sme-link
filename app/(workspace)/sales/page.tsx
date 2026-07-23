@@ -15,7 +15,7 @@ export default async function SalesPage() {
   return (
     <div className="content">
       <PageHeading
-        action={<Link className="button button-primary" href={usePos ? "/pos" : "/sales/new"}><Plus size={18} /> {usePos ? "Open POS" : "Record sale"}</Link>}
+        action={<Link className="button button-primary" href={usePos ? "/pos" : "/sales/new"}><Plus size={18} /> {usePos ? "POS View" : "Record sale"}</Link>}
         description="Record completed transactions and review business income."
         eyebrow="Money in"
         title="Sales"

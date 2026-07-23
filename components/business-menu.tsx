@@ -1,10 +1,10 @@
 "use client";
 
-import { ChevronDown, Monitor, Settings, Store } from "lucide-react";
+import { BarChart3, ChevronDown, Monitor, Settings, Store } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-export function BusinessMenu({ posEnabled }: { posEnabled: boolean }) {
+export function BusinessMenu({ mode = "business", posEnabled }: { mode?: "business" | "pos"; posEnabled: boolean }) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
 
@@ -20,18 +20,21 @@ export function BusinessMenu({ posEnabled }: { posEnabled: boolean }) {
     <div className="business-menu" ref={wrapper}>
       <button
         aria-expanded={open}
-        className="button button-secondary desktop-only"
+        className="button button-secondary mode-switcher-button"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        <Store size={17} /> Business <ChevronDown size={15} />
+        {mode === "business" ? <Store size={17} /> : <Monitor size={17} />}
+        {mode === "business" ? "Business Mode" : "POS View"}
+        <ChevronDown size={15} />
       </button>
       {open && (
         <div className="business-menu-popover">
+          <Link aria-current={mode === "business" ? "page" : undefined} data-active={mode === "business"} href="/dashboard"><BarChart3 size={17} /><span><strong>Business Mode</strong><small>Reporting and operations</small></span></Link>
           {posEnabled && (
-            <Link href="/pos"><Monitor size={17} /><span><strong>Open POS</strong><small>Fast walk-in checkout</small></span></Link>
+            <Link aria-current={mode === "pos" ? "page" : undefined} data-active={mode === "pos"} href="/pos"><Monitor size={17} /><span><strong>POS View</strong><small>Fast walk-in checkout</small></span></Link>
           )}
-          <Link href="/settings"><Settings size={17} /><span><strong>Business settings</strong><small>Details and preferences</small></span></Link>
+          {mode === "business" && <Link href="/settings"><Settings size={17} /><span><strong>Business settings</strong><small>Details and preferences</small></span></Link>}
         </div>
       )}
     </div>

@@ -2,10 +2,10 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { formatMoney } from "@/lib/format";
-import { ArrowLeft, Barcode, Check, LoaderCircle, Minus, Plus, Printer, Search, ShoppingCart, Trash2, X } from "lucide-react";
-import Link from "next/link";
+import { Barcode, Check, LoaderCircle, Minus, Plus, Printer, Search, ShoppingCart, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataLoadingState } from "./data-loading-state";
+import { BusinessMenu } from "./business-menu";
 
 type Product = { id: string; name: string; sku: string; barcode: string; category: string; price: number; stock: number; unit: string };
 type Customer = { id: string; name: string };
@@ -119,7 +119,7 @@ export function PosTerminal({ businessId, businessName, primaryCurrency }: {
   return (
     <main className="pos-shell">
       <header className="pos-header">
-        <div><Link aria-label="Back to workspace" className="icon-button" href="/sales"><ArrowLeft size={19} /></Link><div><strong>{businessName}</strong><small>Retail point of sale</small></div></div>
+        <div><BusinessMenu mode="pos" posEnabled /><div><strong>{businessName}</strong><small>Retail point of sale</small></div></div>
         <div className="pos-shortcuts"><span><kbd>/</kbd> Search</span><span><kbd>F2</kbd> Pay</span><span><kbd>Esc</kbd> Clear search</span></div>
       </header>
 
