@@ -843,11 +843,6 @@ export function InventoryView() {
             </div>
 
             <section className="pricing-panel">
-              <h3>How you buy it</h3>
-              <p>
-                Example: a crate of 50 drinks for $20. You do not need the price of one drink
-                from the supplier.
-              </p>
               <div className="form-grid">
                 <div className="field">
                   <label htmlFor="product-pack-size">
