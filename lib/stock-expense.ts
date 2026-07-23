@@ -9,6 +9,7 @@ export async function recordStockPurchaseExpense(
   description: string,
   amount: number,
   paymentMethod = "cash",
+  currency = "USD",
 ) {
   const spent = roundMoney(amount);
   if (spent <= 0) return;
@@ -42,6 +43,7 @@ export async function recordStockPurchaseExpense(
     description: description.slice(0, 180),
     amount: spent,
     payment_method: paymentMethod,
+    currency,
     expense_date: new Date().toISOString().slice(0, 10),
   });
   if (error) throw error;

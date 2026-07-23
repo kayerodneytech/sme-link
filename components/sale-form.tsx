@@ -39,6 +39,8 @@ export function SaleForm() {
   const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>(() =>
     hasSupabaseConfig() ? [] : sampleCustomers,
   );
+  const [currencies, setCurrencies] = useState<string[]>(["USD"]);
+  const [currency, setCurrency] = useState("USD");
   const [loading, setLoading] = useState(hasSupabaseConfig());
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,7 +67,15 @@ export function SaleForm() {
         .select("id, name")
         .eq("is_archived", false)
         .order("name"),
-    ]).then(([productResult, customerResult]) => {
+      getCurrentBusinessId().then(async (businessId) => {
+        const { data } = await supabase
+          .from("businesses")
+          .select("currency, currencies")
+          .eq("id", businessId)
+          .maybeSingle();
+        return data;
+      }),
+    ]).then(([productResult, customerResult, business]) => {
       if (productResult.data) {
         setProductOptions(
           productResult.data.map((product) => ({
@@ -84,6 +94,14 @@ export function SaleForm() {
       }
       if (customerResult.data) {
         setCustomerOptions(customerResult.data);
+      }
+      if (business) {
+        const list =
+          business.currencies?.length > 0
+            ? business.currencies
+            : [business.currency ?? "USD"];
+        setCurrencies(list);
+        setCurrency(business.currency ?? list[0] ?? "USD");
       }
       setLoading(false);
     });
@@ -121,6 +139,7 @@ export function SaleForm() {
           business_id: businessId,
           customer_id: customerId || null,
           payment_method: String(form.get("paymentMethod") ?? "cash"),
+          currency: String(form.get("currency") ?? currency),
         })
         .select("id")
         .single();
@@ -156,6 +175,22 @@ export function SaleForm() {
           <div className="section-heading"><div><h2>Customer and payment</h2><p>Choose a saved customer or record a walk-in sale</p></div></div>
           <div className="form-grid">
             <div className="field"><label htmlFor="customer">Customer</label><select className="select" id="customer" name="customerId"><option value="">Walk-in customer</option>{customerOptions.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></div>
+            <div className="field">
+              <label htmlFor="sale-currency">Currency</label>
+              <select
+                className="select"
+                id="sale-currency"
+                name="currency"
+                onChange={(event) => setCurrency(event.target.value)}
+                value={currency}
+              >
+                {currencies.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="field"><label htmlFor="payment-method">Payment method</label><select className="select" id="payment-method" name="paymentMethod"><option value="cash">Cash</option><option value="ecocash">EcoCash</option><option value="bank_transfer">Bank transfer</option><option value="card">Card</option></select></div>
           </div>
         </section>
@@ -174,7 +209,7 @@ export function SaleForm() {
                       <button aria-label="Remove item" className="icon-button" onClick={() => setLines((current) => current.filter((_, i) => i !== index))} style={{ color: "#B42318" }} type="button"><Trash2 size={17} /></button>
                     </div>
                   </div>
-                  {product && <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12 }}><span className="list-meta">{formatMoney(product.price)} each</span><strong>{formatMoney(product.price * line.quantity)}</strong></div>}
+                  {product && <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12 }}><span className="list-meta">{formatMoney(product.price, currency)} each</span><strong>{formatMoney(product.price * line.quantity, currency)}</strong></div>}
                 </div>
               );
             })}
@@ -187,8 +222,9 @@ export function SaleForm() {
           <div className="section-heading"><div><h2>Sale summary</h2><p>Check the transaction before saving</p></div></div>
           <div className="list">
             <div className="list-row"><span className="list-title">Items</span><span className="list-value">{lines.reduce((sum, line) => sum + line.quantity, 0)}</span></div>
-            <div className="list-row"><span className="list-title">Subtotal</span><span className="list-value">{formatMoney(total)}</span></div>
-            <div className="list-row"><span className="list-title">Total</span><span className="summary-value" style={{ fontSize: "1.65rem", margin: "0 0 0 auto" }}>{formatMoney(total)}</span></div>
+            <div className="list-row"><span className="list-title">Currency</span><span className="list-value">{currency}</span></div>
+            <div className="list-row"><span className="list-title">Subtotal</span><span className="list-value">{formatMoney(total, currency)}</span></div>
+            <div className="list-row"><span className="list-title">Total</span><span className="summary-value" style={{ fontSize: "1.65rem", margin: "0 0 0 auto" }}>{formatMoney(total, currency)}</span></div>
           </div>
           <div className="notice" style={{ margin: "16px 0" }}><Check size={18} /> Stock will be deducted only after the sale is completed.</div>
           {message && <p className={`form-message ${message.includes("completed") ? "form-message-success" : "form-message-error"}`}>{message}</p>}

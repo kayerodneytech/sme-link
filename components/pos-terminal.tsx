@@ -46,6 +46,7 @@ type Receipt = {
   vat: number;
   vatRate: number;
   total: number;
+  currency: string;
   paymentMethod: string;
   cashReceived: number | null;
   change: number | null;
@@ -55,15 +56,19 @@ export function PosTerminal({
   businessId,
   businessName,
   primaryCurrency,
+  currencies = [primaryCurrency],
   vatRegistered = false,
   vatRate = 15,
 }: {
   businessId: string;
   businessName: string;
   primaryCurrency: string;
+  currencies?: string[];
   vatRegistered?: boolean;
   vatRate?: number;
 }) {
+  const acceptedCurrencies =
+    currencies.length > 0 ? currencies : [primaryCurrency];
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -71,7 +76,7 @@ export function PosTerminal({
   const [category, setCategory] = useState("All");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashReceived, setCashReceived] = useState("");
-  const currency = primaryCurrency;
+  const [currency, setCurrency] = useState(primaryCurrency);
   const [customerId, setCustomerId] = useState("");
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
@@ -232,6 +237,7 @@ export function PosTerminal({
           business_id: businessId,
           customer_id: customerId || null,
           payment_method: paymentMethod,
+          currency,
         })
         .select("id, sale_number, created_at")
         .single();
@@ -259,6 +265,7 @@ export function PosTerminal({
         vat: breakdown.vat,
         vatRate: breakdown.rate,
         total: breakdown.gross,
+        currency,
         paymentMethod,
         cashReceived: paymentMethod === "cash" ? cashValue : null,
         change: paymentMethod === "cash" ? calculateChange(total, cashValue) : null,
@@ -435,6 +442,21 @@ export function PosTerminal({
                 </select>
               </div>
               <div className="field">
+                <label htmlFor="pos-currency">Currency</label>
+                <select
+                  className="select"
+                  id="pos-currency"
+                  onChange={(event) => setCurrency(event.target.value)}
+                  value={currency}
+                >
+                  {acceptedCurrencies.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
                 <label htmlFor="pos-payment">Payment</label>
                 <select
                   className="select"
@@ -535,40 +557,40 @@ export function PosTerminal({
                 {receipt.number} · {new Date(receipt.date).toLocaleString()}
               </p>
               <p className="receipt-meta">
-                Paid by {receipt.paymentMethod.replace("_", " ")}
+                Paid by {receipt.paymentMethod.replace("_", " ")} · {receipt.currency}
               </p>
               {receipt.lines.map((line) => (
                 <div key={line.id}>
                   <span>
                     {line.quantity} × {line.label}
                   </span>
-                  <b>{formatMoney(line.price * line.quantity, currency)}</b>
+                  <b>{formatMoney(line.price * line.quantity, receipt.currency)}</b>
                 </div>
               ))}
               <div className="receipt-breakdown">
                 <div>
                   <span>Subtotal</span>
-                  <b>{formatMoney(receipt.net, currency)}</b>
+                  <b>{formatMoney(receipt.net, receipt.currency)}</b>
                 </div>
                 <div>
                   <span>
                     VAT ({receipt.vatRate.toFixed(receipt.vatRate % 1 ? 2 : 0)}%)
                   </span>
-                  <b>{formatMoney(receipt.vat, currency)}</b>
+                  <b>{formatMoney(receipt.vat, receipt.currency)}</b>
                 </div>
                 <div className="receipt-total">
                   <span>Total</span>
-                  <strong>{formatMoney(receipt.total, currency)}</strong>
+                  <strong>{formatMoney(receipt.total, receipt.currency)}</strong>
                 </div>
                 {receipt.cashReceived !== null && (
                   <>
                     <div>
                       <span>Cash received</span>
-                      <b>{formatMoney(receipt.cashReceived, currency)}</b>
+                      <b>{formatMoney(receipt.cashReceived, receipt.currency)}</b>
                     </div>
                     <div>
                       <span>Change</span>
-                      <b>{formatMoney(receipt.change ?? 0, currency)}</b>
+                      <b>{formatMoney(receipt.change ?? 0, receipt.currency)}</b>
                     </div>
                   </>
                 )}

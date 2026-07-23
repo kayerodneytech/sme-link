@@ -42,15 +42,23 @@ export default async function DashboardPage() {
       <section className="summary-grid" aria-label="Business summary">
         <article className="card summary-card">
           <p className="summary-label">Cash in hand</p>
-          <p className="summary-value">{formatMoney(overview.cashOnHand)}</p>
+          <p className="summary-value">
+            {overview.cashAccounts.length > 1
+              ? overview.cashAccounts
+                  .map((account) => formatMoney(account.balance, account.currency))
+                  .join(" · ")
+              : formatMoney(overview.cashOnHand, overview.currency)}
+          </p>
           <p className="trend">
             <PackageCheck size={14} />
-            Started with {formatMoney(overview.openingCash)}
+            {overview.cashAccounts.length > 1
+              ? "Separate balances for each accepted currency"
+              : `Started with ${formatMoney(overview.openingCash, overview.currency)}`}
           </p>
         </article>
         <article className="card summary-card">
-          <p className="summary-label">Money in this month</p>
-          <p className="summary-value">{formatMoney(overview.revenue)}</p>
+          <p className="summary-label">Money in this month ({overview.currency})</p>
+          <p className="summary-value">{formatMoney(overview.revenue, overview.currency)}</p>
           <p className="trend">
             <ArrowUpRight size={14} />
             {change === null
@@ -60,7 +68,7 @@ export default async function DashboardPage() {
         </article>
         <article className="card summary-card">
           <p className="summary-label">Money out this month</p>
-          <p className="summary-value">{formatMoney(overview.expenses)}</p>
+          <p className="summary-value">{formatMoney(overview.expenses, overview.currency)}</p>
           <p className="trend">
             <ReceiptText size={14} />
             {topExpense ? `Most spent on ${topExpense.name.toLowerCase()}` : "No expenses recorded"}
@@ -73,7 +81,7 @@ export default async function DashboardPage() {
           <p className="summary-value">
             {overview.tracksInventory
               ? overview.lowStock.length
-              : formatMoney(overview.estimatedTakeHome)}
+              : formatMoney(overview.estimatedTakeHome, overview.currency)}
           </p>
           <p className={overview.tracksInventory ? "trend trend-warning" : "trend"}>
             {overview.tracksInventory ? (
@@ -175,7 +183,8 @@ export default async function DashboardPage() {
                   <p className="list-meta">{item.detail}</p>
                 </div>
                 <span className="list-value">
-                  {item.kind === "expense" ? "−" : "+"}{formatMoney(item.value)}
+                  {item.kind === "expense" ? "−" : "+"}
+                  {formatMoney(item.value, item.currency)}
                 </span>
               </div>
             );

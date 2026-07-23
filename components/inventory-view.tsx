@@ -63,6 +63,8 @@ export function InventoryView() {
   const [movementType, setMovementType] = useState("stock_received");
   const [receivedPieces, setReceivedPieces] = useState("");
   const [paidForReceived, setPaidForReceived] = useState("");
+  const [currencies, setCurrencies] = useState<string[]>(["USD"]);
+  const [stockCurrency, setStockCurrency] = useState("USD");
 
   const products = useMemo(
     () =>
@@ -98,7 +100,15 @@ export function InventoryView() {
         .from("product_categories")
         .select("id, name")
         .order("name"),
-    ]).then(([productResult, groupResult]) => {
+      getCurrentBusinessId().then(async (businessId) => {
+        const { data } = await supabase
+          .from("businesses")
+          .select("currency, currencies")
+          .eq("id", businessId)
+          .maybeSingle();
+        return data;
+      }),
+    ]).then(([productResult, groupResult, business]) => {
       if (!active) return;
       if (productResult.data) {
         setItems(
@@ -130,6 +140,14 @@ export function InventoryView() {
         setMessage(
           "Product groups need the latest database update. Run migration 0005 in Supabase.",
         );
+      }
+      if (business) {
+        const list =
+          business.currencies?.length > 0
+            ? business.currencies
+            : [business.currency ?? "USD"];
+        setCurrencies(list);
+        setStockCurrency(business.currency ?? list[0] ?? "USD");
       }
       setLoading(false);
     });
@@ -353,6 +371,8 @@ export function InventoryView() {
             businessId,
             `Stock for ${productLabel(name, sizeValue, sizeUnit)}`,
             stockSpend,
+            "cash",
+            stockCurrency,
           );
         }
       }
@@ -436,7 +456,7 @@ export function InventoryView() {
         note:
           note ||
           (type === "stock_received" && nextUnitCost !== null
-            ? `Bought ${quantity} for ${formatMoney(Number(paidForReceived))}`
+            ? `Bought ${quantity} for ${formatMoney(Number(paidForReceived), stockCurrency)}`
             : null),
       });
       if (error) throw error;
@@ -455,6 +475,8 @@ export function InventoryView() {
           businessId,
           `Bought more ${productName}`,
           Number(paidForReceived),
+          "cash",
+          stockCurrency,
         );
       }
       window.location.reload();
@@ -794,8 +816,23 @@ export function InventoryView() {
                       value={paidForReceived}
                     />
                     <p className="field-hint">
-                      This is recorded as a stock purchase expense and comes out of your cash.
+                      This is recorded as a stock purchase expense and comes out of that currency&apos;s cash.
                     </p>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="stock-currency">Paid in</label>
+                    <select
+                      className="select"
+                      id="stock-currency"
+                      onChange={(event) => setStockCurrency(event.target.value)}
+                      value={stockCurrency}
+                    >
+                      {currencies.map((code) => (
+                        <option key={code} value={code}>
+                          {code}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </>
               ) : (
@@ -988,10 +1025,25 @@ export function InventoryView() {
                     When you add stock now, that money is recorded as a stock purchase expense.
                   </p>
                 </div>
+                <div className="field">
+                  <label htmlFor="product-stock-currency">Paid in</label>
+                  <select
+                    className="select"
+                    id="product-stock-currency"
+                    onChange={(event) => setStockCurrency(event.target.value)}
+                    value={stockCurrency}
+                  >
+                    {currencies.map((code) => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <p className="pricing-result">
                 Each piece costs you about{" "}
-                <strong>{formatMoney(unitCost)}</strong>
+                <strong>{formatMoney(unitCost, stockCurrency)}</strong>
               </p>
             </section>
 

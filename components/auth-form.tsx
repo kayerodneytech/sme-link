@@ -35,6 +35,7 @@ type Registration = {
   tracksInventory: boolean;
   needs: string[];
   openingCash: string;
+  cashOpenings: Record<string, string>;
 };
 
 const initialRegistration: Registration = {
@@ -52,6 +53,7 @@ const initialRegistration: Registration = {
   tracksInventory: true,
   needs: ["sales", "inventory", "expenses", "reports"],
   openingCash: "",
+  cashOpenings: { USD: "" },
 };
 
 const needOptions = [
@@ -137,13 +139,20 @@ export function AuthForm() {
       if (current.currencies.includes(value)) {
         if (current.currencies.length === 1) return current;
         const currencies = current.currencies.filter((currency) => currency !== value);
+        const cashOpenings = { ...current.cashOpenings };
+        delete cashOpenings[value];
         return {
           ...current,
           currencies,
+          cashOpenings,
           currency: current.currency === value ? currencies[0] : current.currency,
         };
       }
-      return { ...current, currencies: [...current.currencies, value] };
+      return {
+        ...current,
+        currencies: [...current.currencies, value],
+        cashOpenings: { ...current.cashOpenings, [value]: current.cashOpenings[value] ?? "" },
+      };
     });
   }
 
@@ -173,6 +182,20 @@ export function AuthForm() {
           text: "Enter the money you have to start with (cash in hand). Use 0 if you are starting with nothing.",
         });
         return;
+      }
+    }
+    if (step === 3) {
+      for (const currency of registration.currencies) {
+        const raw = registration.cashOpenings[currency] ?? "";
+        if (raw.trim() === "") continue;
+        const amount = Number(raw);
+        if (!Number.isFinite(amount) || amount < 0) {
+          setMessage({
+            type: "error",
+            text: `Enter a valid starting amount for ${currency}, or leave it blank.`,
+          });
+          return;
+        }
       }
     }
     setStep((current) => Math.min(3, current + 1));
@@ -230,6 +253,17 @@ export function AuthForm() {
           business_needs: registration.needs,
           business_tracks_inventory: registration.tracksInventory,
           business_opening_cash: Number(registration.openingCash),
+          business_cash_openings: Object.fromEntries(
+            registration.currencies.map((currency) => [
+              currency,
+              Number(
+                registration.cashOpenings[currency] ||
+                  (currency === registration.currency
+                    ? registration.openingCash
+                    : "0"),
+              ),
+            ]),
+          ),
         },
       },
     });
@@ -371,6 +405,44 @@ export function AuthForm() {
             <div className="field"><label htmlFor="location">Town or location</label><input className="input" id="location" onChange={(event) => update("location", event.target.value)} placeholder="Harare, Zimbabwe" value={registration.location} /></div>
             <div className="field"><label htmlFor="business-phone">Business phone (optional)</label><input className="input" id="business-phone" onChange={(event) => update("phone", event.target.value)} type="tel" value={registration.phone} /></div>
           </div>
+          {registration.currencies.length > 0 && (
+            <div className="field">
+              <label>Starting cash per currency (optional)</label>
+              <p className="field-hint">
+                Leave blank to use the main starting amount for your main currency and 0 for the others.
+              </p>
+              <div className="form-grid">
+                {registration.currencies.map((currency) => (
+                  <div className="field" key={currency}>
+                    <label htmlFor={`opening-${currency}`}>{currency} starting cash</label>
+                    <input
+                      className="input"
+                      id={`opening-${currency}`}
+                      inputMode="decimal"
+                      min="0"
+                      onChange={(event) =>
+                        setRegistration((current) => ({
+                          ...current,
+                          cashOpenings: {
+                            ...current.cashOpenings,
+                            [currency]: event.target.value,
+                          },
+                        }))
+                      }
+                      placeholder={
+                        currency === registration.currency
+                          ? registration.openingCash || "0"
+                          : "0"
+                      }
+                      step="0.01"
+                      type="number"
+                      value={registration.cashOpenings[currency] ?? ""}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 

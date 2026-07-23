@@ -1,11 +1,12 @@
 "use client";
 
+import { SUPPORTED_CURRENCIES } from "@/lib/cash";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { getCurrentBusinessId } from "@/lib/supabase/workspace";
 import { sectorLabel } from "@/lib/sectors";
 import { Check, LoaderCircle, Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Business = {
   name?: string;
@@ -46,17 +47,93 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
     business?.vat_registered ?? false,
   );
   const [vatRate, setVatRate] = useState(String(business?.vat_rate ?? 15));
-  const [openingCash, setOpeningCash] = useState(String(business?.opening_cash ?? 0));
+  const [cashOpenings, setCashOpenings] = useState<Record<string, string>>(
+    () => {
+      const seed: Record<string, string> = {};
+      for (const code of business?.currencies ?? ["USD"]) {
+        seed[code] =
+          code === (business?.currency ?? "USD")
+            ? String(business?.opening_cash ?? 0)
+            : "0";
+      }
+      return seed;
+    },
+  );
+  const [lockedCurrencies, setLockedCurrencies] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!hasSupabaseConfig()) return;
+    void (async () => {
+      try {
+        const businessId = await getCurrentBusinessId();
+        const supabase = createClient();
+        const [{ data: accounts }, { data: sales }, { data: expenses }] =
+          await Promise.all([
+            supabase
+              .from("business_cash_accounts")
+              .select("currency, opening_balance")
+              .eq("business_id", businessId),
+            supabase
+              .from("sales")
+              .select("currency")
+              .eq("business_id", businessId),
+            supabase
+              .from("expenses")
+              .select("currency")
+              .eq("business_id", businessId),
+          ]);
+
+        if (accounts?.length) {
+          const next: Record<string, string> = {};
+          for (const account of accounts) {
+            next[account.currency] = String(account.opening_balance ?? 0);
+          }
+          setCashOpenings((current) => ({ ...current, ...next }));
+        }
+
+        const used = new Set<string>();
+        for (const sale of sales ?? []) {
+          if (sale.currency) used.add(sale.currency);
+        }
+        for (const expense of expenses ?? []) {
+          if (expense.currency) used.add(expense.currency);
+        }
+        for (const account of accounts ?? []) {
+          if (Number(account.opening_balance) > 0) used.add(account.currency);
+        }
+        setLockedCurrencies([...used]);
+      } catch {
+        // Settings still work if cash-account tables are not migrated yet.
+      }
+    })();
+  }, []);
 
   function toggleCurrency(currency: string) {
     if (currencies.includes(currency)) {
       if (currencies.length === 1) return;
+      if (lockedCurrencies.includes(currency)) {
+        setMessage(
+          `${currency} cannot be turned off because it already has a balance or transactions.`,
+        );
+        return;
+      }
       const next = currencies.filter((item) => item !== currency);
       setCurrencies(next);
+      setCashOpenings((current) => {
+        const copy = { ...current };
+        delete copy[currency];
+        return copy;
+      });
       if (primaryCurrency === currency) setPrimaryCurrency(next[0]);
-    } else setCurrencies([...currencies, currency]);
+    } else {
+      setCurrencies([...currencies, currency]);
+      setCashOpenings((current) => ({
+        ...current,
+        [currency]: current[currency] ?? "0",
+      }));
+    }
   }
 
   function toggleNeed(need: string) {
@@ -84,9 +161,21 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
       return;
     }
 
-    const parsedOpeningCash = Number(openingCash);
-    if (!Number.isFinite(parsedOpeningCash) || parsedOpeningCash < 0) {
-      setMessage("Enter a valid starting cash amount (0 or more).");
+    for (const code of currencies) {
+      const amount = Number(cashOpenings[code] ?? "0");
+      if (!Number.isFinite(amount) || amount < 0) {
+        setMessage(`Enter a valid starting cash amount for ${code}.`);
+        return;
+      }
+    }
+
+    const removedLocked = (business?.currencies ?? []).filter(
+      (code) => !currencies.includes(code) && lockedCurrencies.includes(code),
+    );
+    if (removedLocked.length) {
+      setMessage(
+        `${removedLocked.join(", ")} cannot be turned off because of existing balance or transactions.`,
+      );
       return;
     }
 
@@ -107,9 +196,13 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
     const ensuredCurrencies = currencies.includes(primaryCurrency)
       ? currencies
       : [...currencies, primaryCurrency];
+    const primaryOpening = Number(
+      cashOpenings[primaryCurrency] ?? business?.opening_cash ?? 0,
+    );
 
     try {
       const businessId = await getCurrentBusinessId();
+      const supabase = createClient();
       const payload: Record<string, unknown> = {
         name,
         phone: String(form.get("phone") ?? "").trim() || null,
@@ -122,7 +215,6 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
         tracks_inventory: form.get("tracksInventory") === "on",
       };
 
-      // Only send columns that exist on this project’s businesses table.
       if (business && Object.prototype.hasOwnProperty.call(business, "vat_registered")) {
         payload.vat_registered = vatRegistered;
         payload.vat_rate = vatRegistered
@@ -130,29 +222,51 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
           : Number(business.vat_rate ?? 15);
       }
       if (business && Object.prototype.hasOwnProperty.call(business, "opening_cash")) {
-        payload.opening_cash = parsedOpeningCash;
+        payload.opening_cash = primaryOpening;
       }
 
-      const { error } = await createClient()
+      const { error } = await supabase
         .from("businesses")
         .update(payload)
         .eq("id", businessId);
       if (error) throw error;
 
-      if (
-        Object.prototype.hasOwnProperty.call(business ?? {}, "opening_cash") ===
-          false &&
-        openingCash !== "0"
-      ) {
-        setMessage(
-          "Basic settings saved. Run migration 0007_opening_cash.sql in Supabase to store starting cash.",
-        );
-      } else {
-        setMessage("Business settings saved.");
+      // Keep per-currency cash accounts in sync with enabled currencies.
+      const accountRows = ensuredCurrencies.map((code) => ({
+        business_id: businessId,
+        currency: code,
+        opening_balance: Number(cashOpenings[code] ?? 0),
+        updated_at: new Date().toISOString(),
+      }));
+      const { error: upsertError } = await supabase
+        .from("business_cash_accounts")
+        .upsert(accountRows, { onConflict: "business_id,currency" });
+      if (upsertError) {
+        if (/business_cash_accounts|schema cache/i.test(upsertError.message)) {
+          setMessage(
+            "Basic settings saved. Run supabase/migrations/0008_multi_currency_cash.sql in Supabase to store separate currency balances.",
+          );
+          return;
+        }
+        throw upsertError;
       }
+
+      const removable = (business?.currencies ?? []).filter(
+        (code) =>
+          !ensuredCurrencies.includes(code) &&
+          !lockedCurrencies.includes(code),
+      );
+      if (removable.length) {
+        await supabase
+          .from("business_cash_accounts")
+          .delete()
+          .eq("business_id", businessId)
+          .in("currency", removable);
+      }
+
+      setMessage("Business settings saved.");
     } catch (error) {
-      const detail = supabaseErrorMessage(error);
-      setMessage(detail);
+      setMessage(supabaseErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -209,22 +323,6 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
               id="business-location"
               name="location"
             />
-          </div>
-          <div className="field">
-            <label htmlFor="opening-cash">Starting money (cash in hand)</label>
-            <input
-              className="input"
-              id="opening-cash"
-              inputMode="decimal"
-              min="0"
-              onChange={(event) => setOpeningCash(event.target.value)}
-              step="0.01"
-              type="number"
-              value={openingCash}
-            />
-            <p className="field-hint">
-              Used to calculate cash in hand. Sales add to it. Expenses and stock purchases come out of it.
-            </p>
           </div>
         </div>
       </section>
@@ -355,13 +453,17 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
       <section className="card card-pad">
         <div className="section-heading">
           <div>
-            <h2>Currencies</h2>
-            <p>Accept several currencies while keeping one currency for reports.</p>
+            <h2>Currencies & cash</h2>
+            <p>
+              Each currency is a separate cash account. Sales and expenses only
+              affect the currency you choose for that transaction.
+            </p>
           </div>
         </div>
         <div className="need-grid currency-grid">
-          {["USD", "ZIG", "ZAR"].map((currency) => {
+          {SUPPORTED_CURRENCIES.map((currency) => {
             const active = currencies.includes(currency);
+            const locked = lockedCurrencies.includes(currency);
             return (
               <button
                 aria-pressed={active}
@@ -369,14 +471,26 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
                 data-active={active}
                 key={currency}
                 onClick={() => toggleCurrency(currency)}
+                title={
+                  locked
+                    ? "Cannot turn off: this currency already has a balance or transactions"
+                    : undefined
+                }
                 type="button"
               >
-                <span>{currency}</span>
+                <span>
+                  {currency}
+                  {locked ? " · in use" : ""}
+                </span>
                 {active && <Check size={15} />}
               </button>
             );
           })}
         </div>
+        <p className="field-hint">
+          A currency cannot be turned off once it has transactions or a starting
+          balance.
+        </p>
         <div className="field settings-primary-currency">
           <label htmlFor="primary-currency">Main reporting currency</label>
           <select
@@ -389,6 +503,30 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
               <option key={currency}>{currency}</option>
             ))}
           </select>
+        </div>
+        <div className="form-grid">
+          {currencies.map((currency) => (
+            <div className="field" key={currency}>
+              <label htmlFor={`opening-${currency}`}>
+                Starting cash · {currency}
+              </label>
+              <input
+                className="input"
+                id={`opening-${currency}`}
+                inputMode="decimal"
+                min="0"
+                onChange={(event) =>
+                  setCashOpenings((current) => ({
+                    ...current,
+                    [currency]: event.target.value,
+                  }))
+                }
+                step="0.01"
+                type="number"
+                value={cashOpenings[currency] ?? "0"}
+              />
+            </div>
+          ))}
         </div>
       </section>
 
@@ -428,8 +566,8 @@ function supabaseErrorMessage(error: unknown) {
         ? (error as { message: string }).message
         : "Settings could not be saved.";
 
-  if (/opening_cash|schema cache/i.test(message)) {
-    return `${message} Run supabase/migrations/0007_opening_cash.sql in the Supabase SQL editor, then refresh this page.`;
+  if (/currencies|business_cash_accounts|opening_cash|schema cache/i.test(message)) {
+    return `${message} Run supabase/migrations/0008_multi_currency_cash.sql in the Supabase SQL editor, then refresh this page.`;
   }
   if (/vat_registered|vat_rate/i.test(message)) {
     return `${message} Run supabase/migrations/0004_vat_settings.sql in the Supabase SQL editor, then refresh this page.`;

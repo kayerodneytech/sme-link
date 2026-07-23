@@ -29,7 +29,9 @@ export default async function PosPage() {
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("name, sector, currency, tracks_inventory, vat_registered, vat_rate")
+    .select(
+      "name, sector, currency, currencies, tracks_inventory, vat_registered, vat_rate",
+    )
     .eq("id", membership.business_id)
     .maybeSingle();
 
@@ -37,10 +39,16 @@ export default async function PosPage() {
     redirect("/sales");
   }
 
+  const currencies =
+    business.currencies?.length > 0
+      ? business.currencies
+      : [business.currency];
+
   return (
     <PosTerminal
       businessId={membership.business_id}
       businessName={business.name}
+      currencies={currencies}
       primaryCurrency={business.currency}
       vatRate={Number(business.vat_rate ?? 15)}
       vatRegistered={Boolean(business.vat_registered)}

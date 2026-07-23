@@ -25,14 +25,22 @@ export default async function ReportsPage() {
       <section className="summary-grid">
         <article className="card summary-card">
           <p className="summary-label">Cash in hand</p>
-          <p className="summary-value">{formatMoney(overview.cashOnHand)}</p>
+          <p className="summary-value">
+            {overview.cashAccounts.length > 1
+              ? overview.cashAccounts
+                  .map((account) => formatMoney(account.balance, account.currency))
+                  .join(" · ")
+              : formatMoney(overview.cashOnHand, overview.currency)}
+          </p>
           <p className="trend">
-            Started with {formatMoney(overview.openingCash)} · sales add, spending subtracts
+            {overview.cashAccounts.length > 1
+              ? "Separate balances for each accepted currency"
+              : `Started with ${formatMoney(overview.openingCash, overview.currency)} · sales add, spending subtracts`}
           </p>
         </article>
         <article className="card summary-card">
-          <p className="summary-label">Money from sales · this month</p>
-          <p className="summary-value">{formatMoney(overview.revenue)}</p>
+          <p className="summary-label">Money from sales · this month ({overview.currency})</p>
+          <p className="summary-value">{formatMoney(overview.revenue, overview.currency)}</p>
           <p className="trend">
             <TrendingUp size={14} /> What customers paid you
           </p>
@@ -40,19 +48,19 @@ export default async function ReportsPage() {
         {overview.tracksInventory ? (
           <article className="card summary-card">
             <p className="summary-label">What sold stock cost you</p>
-            <p className="summary-value">{formatMoney(overview.costOfGoods)}</p>
+            <p className="summary-value">{formatMoney(overview.costOfGoods, overview.currency)}</p>
             <p className="trend">Used for profit, separate from cash spent buying stock</p>
           </article>
         ) : (
           <article className="card summary-card">
             <p className="summary-label">Running expenses · this month</p>
-            <p className="summary-value">{formatMoney(overview.operatingExpenses)}</p>
+            <p className="summary-value">{formatMoney(overview.operatingExpenses, overview.currency)}</p>
             <p className="trend">Rent, transport and other costs</p>
           </article>
         )}
         <article className="card summary-card">
           <p className="summary-label">Estimated take-home · this month</p>
-          <p className="summary-value">{formatMoney(overview.estimatedTakeHome)}</p>
+          <p className="summary-value">{formatMoney(overview.estimatedTakeHome, overview.currency)}</p>
           <p className="trend">
             {overview.estimatedTakeHome >= 0
               ? overview.tracksInventory
@@ -70,15 +78,22 @@ export default async function ReportsPage() {
             <strong>
               {overview.tracksInventory
                 ? overview.salesProfit >= 0
-                  ? `Sales left about ${formatMoney(overview.salesProfit)} after the cost of sold stock.`
+                  ? `Sales left about ${formatMoney(overview.salesProfit, overview.currency)} after the cost of sold stock.`
                   : "Sold stock is costing more than customers are paying."
-                : `Sales this month total ${formatMoney(overview.revenue)}.`}
+                : `Sales this month total ${formatMoney(overview.revenue, overview.currency)}.`}
             </strong>
             <p>
-              Cash in hand is now {formatMoney(overview.cashOnHand)}.
+              Cash in hand
+              {overview.cashAccounts.length > 1
+                ? `: ${overview.cashAccounts
+                    .map((account) =>
+                      formatMoney(account.balance, account.currency),
+                    )
+                    .join(" · ")}.`
+                : ` is now ${formatMoney(overview.cashOnHand, overview.currency)}.`}
               {overview.estimatedTakeHome >= 0
-                ? ` Estimated take-home after running costs is ${formatMoney(overview.estimatedTakeHome)}.`
-                : ` Running costs of ${formatMoney(overview.operatingExpenses)} are higher than sales profit.`}
+                ? ` Estimated take-home after running costs is ${formatMoney(overview.estimatedTakeHome, overview.currency)}.`
+                : ` Running costs of ${formatMoney(overview.operatingExpenses, overview.currency)} are higher than sales profit.`}
             </p>
           </div>
         </article>
@@ -92,7 +107,7 @@ export default async function ReportsPage() {
             </strong>
             <p>
               {topExpense
-                ? `${formatMoney(topExpense.value)} was recorded in this group.`
+                ? `${formatMoney(topExpense.value, overview.currency)} was recorded in this group.`
                 : "Add expenses as they happen to understand where money goes."}
             </p>
           </div>
@@ -110,8 +125,8 @@ export default async function ReportsPage() {
           </div>
           <CashFlowBars data={overview.monthly} />
           <p className="field-hint" style={{ marginTop: 12 }}>
-            Six-month sales {formatMoney(sixMonthRevenue)} · expenses{" "}
-            {formatMoney(sixMonthExpenses)} ({expenseShare.toFixed(1)}% of sales)
+            Six-month sales {formatMoney(sixMonthRevenue, overview.currency)} · expenses{" "}
+            {formatMoney(sixMonthExpenses, overview.currency)} ({expenseShare.toFixed(1)}% of sales)
           </p>
         </section>
         <section className="card card-pad">
@@ -126,7 +141,7 @@ export default async function ReportsPage() {
             {overview.expenseCategories.slice(0, 4).map((category) => (
               <div className="list-row" key={category.name}>
                 <span className="list-title">{category.name}</span>
-                <span className="list-value">{formatMoney(category.value)}</span>
+                <span className="list-value">{formatMoney(category.value, overview.currency)}</span>
               </div>
             ))}
           </div>
