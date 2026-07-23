@@ -17,6 +17,7 @@ one workspace. The university research chapters supporting the project are in
 3. Add the project URL and publishable key from Supabase.
 4. Run the SQL files in `supabase/migrations/` in filename order. If `0001` has
    already been applied, run only the later migrations that have not been run.
+   The latest migration adds VAT receipt settings.
 5. Start the application with `npm run dev`.
 
 Without environment values, the application opens in a demonstration workspace

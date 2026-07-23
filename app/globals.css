@@ -1266,6 +1266,19 @@ h2 {
 .settings-form { display: grid; gap: 16px; max-width: 920px; }
 .settings-check { margin-top: 18px; }
 .settings-primary-currency { margin-top: 18px; max-width: 310px; }
+.settings-vat-rate { margin-top: 16px; max-width: 220px; }
+.field-hint {
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.4;
+  margin: 7px 0 0;
+}
+.input:disabled,
+.select:disabled {
+  background: #f2f4f7;
+  color: var(--muted);
+  cursor: not-allowed;
+}
 .currency-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 500px; }
 
 .mode-switcher-button { min-width: 154px; }
@@ -1339,7 +1352,23 @@ kbd {
 .pos-checkout { border-top: 1px solid var(--line); padding: 14px 16px 16px; }
 .pos-checkout .form-grid { grid-template-columns: 1fr 1fr; }
 .pos-checkout .input, .pos-checkout .select { min-height: 40px; }
-.pos-total { align-items: center; display: flex; justify-content: space-between; padding: 15px 0 10px; }
+.pos-cash-grid { margin-top: 12px; }
+.pos-totals {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.pos-totals > div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  font-size: .84rem;
+}
+.pos-totals > div span { color: var(--muted); }
+.pos-totals > div strong { color: var(--ink); font-weight: 700; }
+.pos-total { align-items: center; display: flex; justify-content: space-between; padding: 6px 0 4px; }
 .pos-total span { color: var(--muted); font-weight: 700; }
 .pos-total strong { color: var(--navy-deep); font-size: 1.7rem; letter-spacing: -.04em; }
 .pos-currency { display: flex; gap: 7px; margin-bottom: 10px; }
@@ -1353,9 +1382,23 @@ kbd {
 .receipt-close { position: absolute; right: 12px; top: 12px; }
 .receipt { color: #111; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; padding: 16px 10px; }
 .receipt h2, .receipt > p, .receipt > small { display: block; text-align: center; }
-.receipt > p { color: #555; font-size: .72rem; margin-bottom: 22px; }
-.receipt > div { display: flex; font-size: .76rem; justify-content: space-between; padding: 7px 0; }
-.receipt-total { border-top: 1px dashed #777; font-size: .95rem !important; margin-top: 10px; padding-top: 14px !important; }
+.receipt > p { color: #555; font-size: .72rem; margin-bottom: 8px; }
+.receipt-meta { margin-bottom: 18px !important; text-transform: capitalize; }
+.receipt > div:not(.receipt-breakdown) { display: flex; font-size: .76rem; justify-content: space-between; padding: 7px 0; }
+.receipt-breakdown {
+  border-top: 1px dashed #777;
+  display: grid;
+  gap: 2px;
+  margin-top: 10px;
+  padding-top: 8px;
+}
+.receipt-breakdown > div {
+  display: flex;
+  font-size: .76rem;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.receipt-total { font-size: .95rem !important; margin-top: 4px; padding-top: 10px !important; }
 .receipt > small { margin-top: 22px; }
 
 @media (max-width: 800px) {

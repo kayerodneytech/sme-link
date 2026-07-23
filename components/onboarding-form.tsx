@@ -41,7 +41,18 @@ export function OnboardingForm() {
     <form className="form-stack" onSubmit={submit}>
       <div className="field"><label htmlFor="onboarding-name">Business name</label><input className="input" id="onboarding-name" name="name" required /></div>
       <div className="form-grid">
-        <div className="field"><label htmlFor="onboarding-sector">Sector</label><select className="select" id="onboarding-sector" name="sector"><option value="retail">Retail</option><option value="wholesale">Wholesale</option><option value="services">Services</option><option value="manufacturing">Manufacturing</option><option value="hospitality">Hospitality</option><option value="other">Other</option></select></div>
+        <div className="field">
+          <label htmlFor="onboarding-sector">Sector</label>
+          <select className="select" id="onboarding-sector" name="sector">
+            <option value="retail">Retail</option>
+            <option value="wholesale">Wholesale</option>
+            <option value="services">Services</option>
+            <option value="manufacturing">Manufacturing</option>
+            <option value="hospitality">Hospitality</option>
+            <option value="other">Other</option>
+          </select>
+          <p className="field-hint">This cannot be changed later, so choose carefully.</p>
+        </div>
         <div className="field"><label htmlFor="onboarding-currency">Main reporting currency</label><select className="select" id="onboarding-currency" name="currency"><option>USD</option><option>ZIG</option><option>ZAR</option></select></div>
         <fieldset className="field"><legend>Accepted currencies</legend><label><input defaultChecked name="currencies" type="checkbox" value="USD" /> USD</label><label><input name="currencies" type="checkbox" value="ZIG" /> ZIG</label><label><input name="currencies" type="checkbox" value="ZAR" /> ZAR</label></fieldset>
         <div className="field"><label htmlFor="onboarding-phone">Business phone</label><input className="input" id="onboarding-phone" name="phone" type="tel" /></div>

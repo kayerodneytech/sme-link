@@ -282,7 +282,18 @@ export function AuthForm() {
         <>
           <div className="registration-heading"><p className="eyebrow">Step 2 of 3</p><h2>About the business</h2><p>This helps SMElink suggest a useful starting setup.</p></div>
           <div className="field"><label htmlFor="business-name">Business name</label><input className="input" id="business-name" onChange={(event) => update("businessName", event.target.value)} required value={registration.businessName} /></div>
-          <div className="field"><label htmlFor="business-sector">What type of business is it?</label><select className="select" id="business-sector" onChange={(event) => chooseSector(event.target.value)} value={registration.sector}><option value="retail">Shop or retail business</option><option value="wholesale">Wholesale or distribution</option><option value="services">Service business</option><option value="manufacturing">Manufacturing or production</option><option value="hospitality">Food, accommodation or hospitality</option><option value="other">Another type of business</option></select></div>
+          <div className="field">
+            <label htmlFor="business-sector">What type of business is it?</label>
+            <select className="select" id="business-sector" onChange={(event) => chooseSector(event.target.value)} value={registration.sector}>
+              <option value="retail">Shop or retail business</option>
+              <option value="wholesale">Wholesale or distribution</option>
+              <option value="services">Service business</option>
+              <option value="manufacturing">Manufacturing or production</option>
+              <option value="hospitality">Food, accommodation or hospitality</option>
+              <option value="other">Another type of business</option>
+            </select>
+            <p className="field-hint">This cannot be changed later, so choose carefully.</p>
+          </div>
           <div className="form-grid">
             <div className="field"><label htmlFor="team-size">How many people work here?</label><select className="select" id="team-size" onChange={(event) => update("teamSize", event.target.value)} value={registration.teamSize}><option value="just_me">Just me</option><option value="2_5">2–5 people</option><option value="6_20">6–20 people</option><option value="more_than_20">More than 20</option></select></div>
             <div className="field"><label htmlFor="sales-mode">How do customers usually buy?</label><select className="select" id="sales-mode" onChange={(event) => update("salesMode", event.target.value)} value={registration.salesMode}><option value="walk_in">Mostly walk-in sales</option><option value="orders">Mostly customer orders</option><option value="both">Both walk-ins and orders</option></select></div>
