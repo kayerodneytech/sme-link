@@ -22,7 +22,7 @@ export default function LoginPage() {
             <span className="badge" style={{ background: "rgba(255,255,255,.1)", color: "white" }}><ShieldCheck size={14} /> Private records</span>
           </div>
         </div>
-        <p style={{ color: "#7F95A7", fontSize: ".74rem", margin: 0 }}>Designed from research into SME resilience in Zimbabwe.</p>
+        <p style={{ color: "#7F95A7", fontSize: ".74rem", margin: 0 }}>Shaped by feedback from small business owners.</p>
       </section>
       <section className="auth-content">
         <div className="auth-card">

@@ -20,22 +20,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const mainItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/sales", label: "Sales", icon: CircleDollarSign },
-  { href: "/inventory", label: "Inventory", icon: Boxes },
-  { href: "/orders", label: "Orders", icon: ClipboardList },
-  { href: "/expenses", label: "Expenses", icon: ReceiptText },
-  { href: "/customers", label: "Customers", icon: Users },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/dashboard", label: "Dashboard", area: "dashboard", icon: LayoutDashboard },
+  { href: "/sales", label: "Sales", area: "sales", icon: CircleDollarSign },
+  { href: "/inventory", label: "Inventory", area: "inventory", icon: Boxes },
+  { href: "/orders", label: "Orders", area: "orders", icon: ClipboardList },
+  { href: "/expenses", label: "Expenses", area: "expenses", icon: ReceiptText },
+  { href: "/customers", label: "Customers", area: "customers", icon: Users },
+  { href: "/reports", label: "Reports", area: "reports", icon: BarChart3 },
 ];
 
-const mobileItems = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/sales", label: "Sales", icon: ShoppingCart },
-  { href: "/inventory", label: "Stock", icon: Boxes },
-  { href: "/orders", label: "Orders", icon: ClipboardList },
-  { href: "/more", label: "More", icon: Menu },
-];
+const mobileIcons = {
+  sales: ShoppingCart,
+  inventory: Boxes,
+  orders: ClipboardList,
+  expenses: ReceiptText,
+  customers: Users,
+  reports: BarChart3,
+};
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -47,14 +48,35 @@ export function AppShell({
   businessLocation = "Harare, Zimbabwe",
   userRole = "Owner",
   demoMode = false,
+  enabledAreas,
 }: {
   children: React.ReactNode;
   businessName?: string;
   businessLocation?: string;
   userRole?: string;
   demoMode?: boolean;
+  enabledAreas?: string[];
 }) {
   const pathname = usePathname();
+  const visibleItems =
+    enabledAreas && enabledAreas.length > 0
+      ? mainItems.filter(
+          (item) =>
+            item.area === "dashboard" || enabledAreas.includes(item.area),
+        )
+      : mainItems;
+  const mobileItems = [
+    { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+    ...visibleItems
+      .filter((item) => item.area !== "dashboard")
+      .slice(0, 3)
+      .map((item) => ({
+        href: item.href,
+        label: item.area === "inventory" ? "Stock" : item.label,
+        icon: mobileIcons[item.area as keyof typeof mobileIcons],
+      })),
+    { href: "/more", label: "More", icon: Menu },
+  ];
 
   return (
     <div className="app-shell">
@@ -71,7 +93,7 @@ export function AppShell({
 
         <p className="side-label">Workspace</p>
         <nav className="side-nav" aria-label="Main navigation">
-          {mainItems.map((item) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link

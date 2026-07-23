@@ -30,7 +30,9 @@ so the interface can be reviewed.
    project URL and publishable key automatically.
 5. In Supabase Authentication URL Configuration, set the Site URL to the Vercel
    production URL and add `https://your-domain/auth/callback` as a redirect URL.
-6. Deploy, then create an account through the application to test the full flow.
+6. In Supabase Authentication Providers, open Email and turn off `Confirm email`.
+   SMElink creates the business workspace immediately after account creation.
+7. Deploy, then create an account through the application to test the full flow.
 
 For local development, copy `.env.example` to `.env.local` and replace the
 example values with the same two values shown in the Supabase project settings.

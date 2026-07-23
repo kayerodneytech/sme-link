@@ -40,7 +40,7 @@ export function OnboardingForm() {
     <form className="form-stack" onSubmit={submit}>
       <div className="field"><label htmlFor="onboarding-name">Business name</label><input className="input" id="onboarding-name" name="name" required /></div>
       <div className="form-grid">
-        <div className="field"><label htmlFor="onboarding-sector">Sector</label><select className="select" id="onboarding-sector" name="sector"><option value="retail">Retail</option><option value="services">Services</option><option value="manufacturing">Manufacturing</option><option value="hospitality">Hospitality</option><option value="other">Other</option></select></div>
+        <div className="field"><label htmlFor="onboarding-sector">Sector</label><select className="select" id="onboarding-sector" name="sector"><option value="retail">Retail</option><option value="wholesale">Wholesale</option><option value="services">Services</option><option value="manufacturing">Manufacturing</option><option value="hospitality">Hospitality</option><option value="other">Other</option></select></div>
         <div className="field"><label htmlFor="onboarding-currency">Reporting currency</label><select className="select" id="onboarding-currency" name="currency"><option>USD</option><option>ZiG</option><option>ZAR</option></select></div>
         <div className="field"><label htmlFor="onboarding-phone">Business phone</label><input className="input" id="onboarding-phone" name="phone" type="tel" /></div>
         <div className="field"><label htmlFor="onboarding-location">Location</label><input className="input" id="onboarding-location" name="location" placeholder="Harare, Zimbabwe" /></div>

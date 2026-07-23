@@ -18,21 +18,35 @@ type SetupProgress = {
   expenses: boolean;
 };
 
-async function getSetupProgress(): Promise<SetupProgress> {
+type SetupData = {
+  progress: SetupProgress;
+  needs: string[];
+  tracksInventory: boolean;
+};
+
+async function getSetupProgress(): Promise<SetupData> {
   if (!hasSupabaseConfig()) {
-    return { products: false, customers: false, sales: false, expenses: false };
+    return {
+      progress: { products: false, customers: false, sales: false, expenses: false },
+      needs: ["sales", "inventory", "orders", "customers", "expenses", "reports"],
+      tracksInventory: true,
+    };
   }
 
   const supabase = await createClient();
   const { data: membership } = await supabase
     .from("business_members")
-    .select("business_id")
+    .select("business_id, businesses(primary_needs, tracks_inventory)")
     .eq("status", "active")
     .limit(1)
     .single();
 
   if (!membership) {
-    return { products: false, customers: false, sales: false, expenses: false };
+    return {
+      progress: { products: false, customers: false, sales: false, expenses: false },
+      needs: [],
+      tracksInventory: false,
+    };
   }
 
   const businessId = membership.business_id;
@@ -43,11 +57,19 @@ async function getSetupProgress(): Promise<SetupProgress> {
     supabase.from("expenses").select("id", { count: "exact", head: true }).eq("business_id", businessId),
   ]);
 
+  const business = Array.isArray(membership.businesses)
+    ? membership.businesses[0]
+    : membership.businesses;
+
   return {
-    products: Boolean(products.count),
-    customers: Boolean(customers.count),
-    sales: Boolean(sales.count),
-    expenses: Boolean(expenses.count),
+    progress: {
+      products: Boolean(products.count),
+      customers: Boolean(customers.count),
+      sales: Boolean(sales.count),
+      expenses: Boolean(expenses.count),
+    },
+    needs: business?.primary_needs ?? [],
+    tracksInventory: business?.tracks_inventory ?? false,
   };
 }
 
@@ -87,8 +109,26 @@ const steps = [
 ];
 
 export default async function SetupPage() {
-  const progress = await getSetupProgress();
-  const completed = steps.filter((step) => progress[step.key]).length;
+  const setup = await getSetupProgress();
+  const availableSteps = steps
+    .filter((step) => {
+      if (step.key === "products") return true;
+      if (step.key === "sales") return setup.needs.includes("sales");
+      if (step.key === "customers") {
+        return setup.needs.some((need) => ["customers", "orders"].includes(need));
+      }
+      return setup.needs.some((need) => ["expenses", "reports"].includes(need));
+    })
+    .map((step) =>
+      step.key === "products" && !setup.tracksInventory
+        ? {
+            ...step,
+            title: "Add what you sell",
+            copy: "Add the services or products customers buy from the business.",
+          }
+        : step,
+    );
+  const completed = availableSteps.filter((step) => setup.progress[step.key]).length;
 
   return (
     <div className="content setup-page">
@@ -100,18 +140,18 @@ export default async function SetupPage() {
 
       <section className="card setup-progress">
         <div>
-          <strong>{completed} of {steps.length} complete</strong>
-          <p>You only need products before recording a sale. The other steps can be done when they are useful.</p>
+          <strong>{completed} of {availableSteps.length} complete</strong>
+          <p>These steps are based on what you chose during account setup. They can be changed later.</p>
         </div>
-        <div className="progress-track" aria-label={`${completed} of ${steps.length} setup steps complete`}>
-          <span style={{ width: `${(completed / steps.length) * 100}%` }} />
+        <div className="progress-track" aria-label={`${completed} of ${availableSteps.length} setup steps complete`}>
+          <span style={{ width: `${(completed / availableSteps.length) * 100}%` }} />
         </div>
       </section>
 
       <section className="setup-list">
-        {steps.map((step, index) => {
+        {availableSteps.map((step, index) => {
           const Icon = step.icon;
-          const done = progress[step.key];
+          const done = setup.progress[step.key];
           return (
             <article className="card setup-step" key={step.key}>
               <span className={done ? "setup-step-icon setup-step-done" : "setup-step-icon"}>

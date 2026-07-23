@@ -657,7 +657,7 @@ h2 {
 }
 
 .auth-card {
-  max-width: 460px;
+  max-width: 620px;
   padding: 24px;
   width: 100%;
 }
@@ -704,6 +704,152 @@ h2 {
 .form-message-success {
   background: var(--teal-soft);
   color: var(--teal);
+}
+
+.auth-mode-switch {
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.auth-mode-switch button {
+  flex: 1;
+}
+
+.registration-progress {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 6px 8px;
+  position: relative;
+}
+
+.registration-progress > div {
+  background: #e2e8eb;
+  height: 3px;
+  left: 18px;
+  position: absolute;
+  right: 18px;
+  top: 15px;
+  z-index: 0;
+}
+
+.registration-progress > div i {
+  background: var(--teal);
+  display: block;
+  height: 100%;
+  transition: width 180ms ease;
+}
+
+.registration-progress > span {
+  align-items: center;
+  background: #e8edef;
+  border: 3px solid white;
+  border-radius: 50%;
+  color: var(--muted);
+  display: flex;
+  font-size: 0.7rem;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  position: relative;
+  width: 34px;
+  z-index: 1;
+}
+
+.registration-progress > span[data-active="true"] {
+  background: var(--teal);
+  color: white;
+}
+
+.registration-heading h2 {
+  font-size: 1.25rem;
+  margin: 4px 0 5px;
+}
+
+.registration-heading p:last-child,
+.field > small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.need-grid {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.need-option {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 9px;
+  min-height: 52px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.need-option span {
+  flex: 1;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.need-option[data-active="true"] {
+  background: var(--teal-soft);
+  border-color: #9fd4cd;
+  color: var(--teal-dark);
+}
+
+.check-row {
+  align-items: flex-start;
+  background: #f7f9fa;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  cursor: pointer;
+  display: flex;
+  gap: 11px;
+  padding: 12px;
+}
+
+.check-row input {
+  accent-color: var(--teal);
+  height: 18px;
+  margin-top: 1px;
+  width: 18px;
+}
+
+.check-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.check-row small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.registration-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.registration-actions .button-primary {
+  flex: 1;
+}
+
+/* Registration adapts the first workspace to the business profile. */
+@media (max-width: 480px) {
+  .need-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (min-width: 720px) {

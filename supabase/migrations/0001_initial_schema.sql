@@ -14,7 +14,12 @@ create table public.profiles (
 create table public.businesses (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 2 and 120),
-  sector text not null check (sector in ('retail', 'services', 'manufacturing', 'hospitality', 'other')),
+  sector text not null check (sector in ('retail', 'wholesale', 'services', 'manufacturing', 'hospitality', 'other')),
+  team_size text not null default 'just_me' check (team_size in ('just_me', '2_5', '6_20', 'more_than_20')),
+  sales_mode text not null default 'walk_in' check (sales_mode in ('walk_in', 'orders', 'both')),
+  primary_needs text[] not null default array['sales', 'inventory', 'expenses', 'reports']::text[]
+    check (primary_needs <@ array['sales', 'inventory', 'orders', 'expenses', 'customers', 'reports']::text[]),
+  tracks_inventory boolean not null default true,
   phone text,
   location text,
   currency char(3) not null default 'USD',
@@ -365,7 +370,11 @@ create or replace function public.create_business(
   business_sector text,
   business_phone text default null,
   business_location text default null,
-  business_currency text default 'USD'
+  business_currency text default 'USD',
+  business_team_size text default 'just_me',
+  business_sales_mode text default 'walk_in',
+  business_needs text[] default array['sales', 'inventory', 'expenses', 'reports']::text[],
+  business_tracks_inventory boolean default true
 )
 returns uuid
 language plpgsql
@@ -381,7 +390,8 @@ begin
   end if;
 
   insert into public.businesses (
-    name, sector, phone, location, currency, created_by
+    name, sector, phone, location, currency, team_size, sales_mode,
+    primary_needs, tracks_inventory, created_by
   )
   values (
     trim(business_name),
@@ -389,6 +399,10 @@ begin
     nullif(trim(business_phone), ''),
     nullif(trim(business_location), ''),
     upper(business_currency),
+    business_team_size,
+    business_sales_mode,
+    business_needs,
+    business_tracks_inventory,
     auth.uid()
   )
   returning id into new_business_id;
@@ -711,9 +725,9 @@ for update using (
   and (user_id is null or user_id = auth.uid())
 );
 
-revoke all on function public.create_business(text, text, text, text, text) from public;
+revoke all on function public.create_business(text, text, text, text, text, text, text, text[], boolean) from public;
 revoke all on function public.complete_sale(uuid) from public;
 revoke all on function public.convert_order_to_sale(uuid, text) from public;
-grant execute on function public.create_business(text, text, text, text, text) to authenticated;
+grant execute on function public.create_business(text, text, text, text, text, text, text, text[], boolean) to authenticated;
 grant execute on function public.complete_sale(uuid) to authenticated;
 grant execute on function public.convert_order_to_sale(uuid, text) to authenticated;
