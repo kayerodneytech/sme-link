@@ -22,7 +22,19 @@ alter table public.businesses
         'sales', 'inventory', 'orders', 'expenses', 'customers', 'reports'
       ]::text[]
     ),
-  add column tracks_inventory boolean not null default true;
+  add column tracks_inventory boolean not null default true,
+  add column currencies char(3)[];
+
+update public.businesses
+set currencies = array[currency]::char(3)[];
+
+alter table public.businesses
+  alter column currencies set default array['USD']::char(3)[],
+  alter column currencies set not null,
+  add constraint businesses_currencies_not_empty_check
+  check (cardinality(currencies) > 0),
+  add constraint businesses_primary_currency_enabled_check
+  check (currency = any(currencies));
 
 revoke all on function public.create_business(text, text, text, text, text)
   from public;
@@ -39,7 +51,8 @@ create function public.create_business(
   business_needs text[] default array[
     'sales', 'inventory', 'expenses', 'reports'
   ]::text[],
-  business_tracks_inventory boolean default true
+  business_tracks_inventory boolean default true,
+  business_currencies text[] default array['USD']::text[]
 )
 returns uuid
 language plpgsql
@@ -60,6 +73,7 @@ begin
     phone,
     location,
     currency,
+    currencies,
     team_size,
     sales_mode,
     primary_needs,
@@ -72,6 +86,10 @@ begin
     nullif(trim(business_phone), ''),
     nullif(trim(business_location), ''),
     upper(business_currency),
+    array(
+      select distinct upper(value)::char(3)
+      from unnest(array_append(business_currencies, business_currency)) as value
+    ),
     business_team_size,
     business_sales_mode,
     business_needs,
@@ -96,10 +114,10 @@ end;
 $$;
 
 revoke all on function public.create_business(
-  text, text, text, text, text, text, text, text[], boolean
+  text, text, text, text, text, text, text, text[], boolean, text[]
 ) from public;
 grant execute on function public.create_business(
-  text, text, text, text, text, text, text, text[], boolean
+  text, text, text, text, text, text, text, text[], boolean, text[]
 ) to authenticated;
 
 commit;

@@ -31,6 +31,7 @@ type Registration = {
   phone: string;
   location: string;
   currency: string;
+  currencies: string[];
   tracksInventory: boolean;
   needs: string[];
 };
@@ -46,6 +47,7 @@ const initialRegistration: Registration = {
   phone: "",
   location: "",
   currency: "USD",
+  currencies: ["USD"],
   tracksInventory: true,
   needs: ["sales", "inventory", "expenses", "reports"],
 };
@@ -126,6 +128,21 @@ export function AuthForm() {
         ? current.needs.filter((need) => need !== value)
         : [...current.needs, value],
     }));
+  }
+
+  function toggleCurrency(value: string) {
+    setRegistration((current) => {
+      if (current.currencies.includes(value)) {
+        if (current.currencies.length === 1) return current;
+        const currencies = current.currencies.filter((currency) => currency !== value);
+        return {
+          ...current,
+          currencies,
+          currency: current.currency === value ? currencies[0] : current.currency,
+        };
+      }
+      return { ...current, currencies: [...current.currencies, value] };
+    });
   }
 
   function nextStep() {
@@ -211,6 +228,7 @@ export function AuthForm() {
       business_phone: registration.phone,
       business_location: registration.location,
       business_currency: registration.currency,
+      business_currencies: registration.currencies,
       business_team_size: registration.teamSize,
       business_sales_mode: registration.salesMode,
       business_needs: registration.needs,
@@ -298,8 +316,22 @@ export function AuthForm() {
             <input checked={registration.tracksInventory} onChange={(event) => update("tracksInventory", event.target.checked)} type="checkbox" />
             <span><strong>We keep products in stock</strong><small>Turn this off for a service-only business.</small></span>
           </label>
+          <div className="field">
+            <label>Which currencies do you accept?</label>
+            <div className="need-grid">
+              {["USD", "ZIG", "ZAR"].map((currency) => {
+                const selected = registration.currencies.includes(currency);
+                return (
+                  <button aria-pressed={selected} className="need-option" data-active={selected} key={currency} onClick={() => toggleCurrency(currency)} type="button">
+                    <span>{currency}</span>
+                    {selected && <Check size={15} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="form-grid">
-            <div className="field"><label htmlFor="currency">Main currency</label><select className="select" id="currency" onChange={(event) => update("currency", event.target.value)} value={registration.currency}><option>USD</option><option>ZiG</option><option>ZAR</option></select></div>
+            <div className="field"><label htmlFor="currency">Main reporting currency</label><select className="select" id="currency" onChange={(event) => update("currency", event.target.value)} value={registration.currency}>{registration.currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></div>
             <div className="field"><label htmlFor="location">Town or location</label><input className="input" id="location" onChange={(event) => update("location", event.target.value)} placeholder="Harare, Zimbabwe" value={registration.location} /></div>
             <div className="field"><label htmlFor="business-phone">Business phone (optional)</label><input className="input" id="business-phone" onChange={(event) => update("phone", event.target.value)} type="tel" value={registration.phone} /></div>
           </div>
