@@ -10,6 +10,7 @@ coverage/
 out/
 outputs/
 work/
+*.tsbuildinfo
 
 # Local environment files
 .env
