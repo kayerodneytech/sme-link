@@ -40,8 +40,8 @@ const features = [
 const steps = [
   {
     number: "01",
-    title: "Set up the business",
-    copy: "Create a secure workspace with the business name, sector and reporting currency.",
+    title: "Set up your business",
+    copy: "Add your business name, type of work and reporting currency.",
   },
   {
     number: "02",
@@ -88,13 +88,13 @@ export default function Home() {
           <div className="landing-hero-copy">
             <div className="landing-kicker">
               <Sparkles size={15} />
-              Built for the work behind a growing SME
+              Built around how small businesses really work
             </div>
-            <h1>Run the business with clarity, not guesswork.</h1>
+            <h1>Run your business with clarity, not guesswork.</h1>
             <p>
-              SMElink brings sales, expenses, orders, customers and stock into
-              one calm workspace—so everyday records become useful business
-              decisions.
+              Keep sales, expenses, orders, customers and stock in one place.
+              See what is happening, stay in control and make better decisions
+              every day.
             </p>
             <div className="landing-hero-actions">
               <Link className="button button-primary landing-main-cta" href="/login">
@@ -193,7 +193,7 @@ export default function Home() {
       </section>
 
       <section className="landing-proof">
-        <p>One workspace for the records that keep an SME moving</p>
+        <p>One workspace for the records that keep your business moving</p>
         <div>
           <span><ReceiptText size={19} /> Expenses</span>
           <span><CircleDollarSign size={19} /> Sales</span>
@@ -208,9 +208,9 @@ export default function Home() {
           <p className="eyebrow">Practical by design</p>
           <h2>Everything needed for a clear daily picture.</h2>
           <p>
-            The system stays focused on the activities identified in the SME
-            resilience study—without becoming accounting software or an
-            oversized enterprise platform.
+            Record the work your business already does. Check stock, follow
+            orders, track money in and money out, and quickly see what needs
+            your attention.
           </p>
         </div>
         <div className="landing-feature-grid">
@@ -259,14 +259,13 @@ export default function Home() {
       <section className="landing-section landing-purpose" id="purpose">
         <div className="landing-purpose-card">
           <div>
-            <p className="eyebrow">Why SMElink exists</p>
-            <h2>Designed from evidence, built for resilience.</h2>
+            <p className="eyebrow">Built with business owners in mind</p>
+            <h2>Shaped by real business needs.</h2>
             <p>
-              The COVID-19 study found that Zimbabwean SMEs were constrained by
-              disrupted operations, weak cash-flow visibility, limited digital
-              readiness and difficult access to timely information. SMElink
-              turns those lessons into a practical system for stronger everyday
-              management.
+              Based on research and feedback from small business owners,
+              SMElink focuses on the practical information people need to keep
+              trading, manage limited resources and stay resilient when
+              economic conditions are uncertain.
             </p>
           </div>
           <div className="landing-purpose-points">
@@ -279,7 +278,7 @@ export default function Home() {
 
       <section className="landing-final-cta">
         <div>
-          <p className="eyebrow">Ready when the business is</p>
+          <p className="eyebrow">Ready when you are</p>
           <h2>Bring the day-to-day work into one clear view.</h2>
           <p>Start with products, record the first sale, and build a more reliable picture of the business over time.</p>
           <Link className="button landing-light-button" href="/login">
@@ -294,8 +293,8 @@ export default function Home() {
           <span className="landing-brand-mark"><PackageCheck size={20} /></span>
           <span>SMElink</span>
         </Link>
-        <p>Practical operations support for growing SMEs.</p>
-        <span>University project · Zimbabwe</span>
+        <p>Practical support for growing businesses.</p>
+        <span>Developed by Thabiso · Zimbabwe</span>
       </footer>
     </main>
   );
