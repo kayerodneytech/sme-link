@@ -204,7 +204,21 @@ export function AuthForm() {
     const result = await supabase.auth.signUp({
       email: registration.email,
       password: registration.password,
-      options: { data: { full_name: registration.fullName } },
+      options: {
+        data: {
+          full_name: registration.fullName,
+          business_name: registration.businessName,
+          business_sector: registration.sector,
+          business_phone: registration.phone,
+          business_location: registration.location,
+          business_currency: registration.currency,
+          business_currencies: registration.currencies,
+          business_team_size: registration.teamSize,
+          business_sales_mode: registration.salesMode,
+          business_needs: registration.needs,
+          business_tracks_inventory: registration.tracksInventory,
+        },
+      },
     });
 
     if (result.error) {
@@ -222,27 +236,7 @@ export function AuthForm() {
       return;
     }
 
-    const { error: businessError } = await supabase.rpc("create_business", {
-      business_name: registration.businessName,
-      business_sector: registration.sector,
-      business_phone: registration.phone,
-      business_location: registration.location,
-      business_currency: registration.currency,
-      business_currencies: registration.currencies,
-      business_team_size: registration.teamSize,
-      business_sales_mode: registration.salesMode,
-      business_needs: registration.needs,
-      business_tracks_inventory: registration.tracksInventory,
-    });
     setLoading(false);
-
-    if (businessError) {
-      setMessage({
-        type: "error",
-        text: `The account was created, but the business setup could not be saved: ${businessError.message}`,
-      });
-      return;
-    }
 
     window.location.assign("/setup");
   }

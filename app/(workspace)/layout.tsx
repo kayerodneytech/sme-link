@@ -23,7 +23,7 @@ export default async function WorkspaceLayout({
 
   const { data: membership } = await supabase
     .from("business_members")
-    .select("role, businesses(name, location, primary_needs, tracks_inventory)")
+    .select("role, businesses(name, location, primary_needs, tracks_inventory, sales_mode)")
     .eq("user_id", user.id)
     .eq("status", "active")
     .limit(1)
@@ -44,6 +44,9 @@ export default async function WorkspaceLayout({
       enabledAreas={[
         ...(business?.primary_needs ?? []),
         ...(business?.tracks_inventory ? ["inventory"] : []),
+        ...(["orders", "both"].includes(business?.sales_mode ?? "")
+          ? ["orders", "customers"]
+          : []),
       ]}
       userRole={membership.role === "owner" ? "Owner" : "Staff"}
     >

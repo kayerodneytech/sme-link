@@ -22,6 +22,7 @@ type SetupData = {
   progress: SetupProgress;
   needs: string[];
   tracksInventory: boolean;
+  salesMode: string;
 };
 
 async function getSetupProgress(): Promise<SetupData> {
@@ -30,13 +31,14 @@ async function getSetupProgress(): Promise<SetupData> {
       progress: { products: false, customers: false, sales: false, expenses: false },
       needs: ["sales", "inventory", "orders", "customers", "expenses", "reports"],
       tracksInventory: true,
+      salesMode: "both",
     };
   }
 
   const supabase = await createClient();
   const { data: membership } = await supabase
     .from("business_members")
-    .select("business_id, businesses(primary_needs, tracks_inventory)")
+    .select("business_id, businesses(primary_needs, tracks_inventory, sales_mode)")
     .eq("status", "active")
     .limit(1)
     .single();
@@ -46,6 +48,7 @@ async function getSetupProgress(): Promise<SetupData> {
       progress: { products: false, customers: false, sales: false, expenses: false },
       needs: [],
       tracksInventory: false,
+      salesMode: "walk_in",
     };
   }
 
@@ -70,6 +73,7 @@ async function getSetupProgress(): Promise<SetupData> {
     },
     needs: business?.primary_needs ?? [],
     tracksInventory: business?.tracks_inventory ?? false,
+    salesMode: business?.sales_mode ?? "walk_in",
   };
 }
 
@@ -115,7 +119,10 @@ export default async function SetupPage() {
       if (step.key === "products") return true;
       if (step.key === "sales") return setup.needs.includes("sales");
       if (step.key === "customers") {
-        return setup.needs.some((need) => ["customers", "orders"].includes(need));
+        return (
+          setup.needs.some((need) => ["customers", "orders"].includes(need)) ||
+          ["orders", "both"].includes(setup.salesMode)
+        );
       }
       return setup.needs.some((need) => ["expenses", "reports"].includes(need));
     })
