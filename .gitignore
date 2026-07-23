@@ -1,13 +1,24 @@
 # Dependencies and build output
 node_modules/
 .next/
+next-env.d.ts
+.vinext/
+.wrangler/
+.vercel/
 dist/
 coverage/
+out/
+outputs/
+work/
 
 # Local environment files
 .env
 .env.local
 .env.*.local
+!.env.example
+
+# Local certificates
+*.pem
 
 # Temporary planning and generated files
 tmp/
@@ -22,4 +33,3 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
-
