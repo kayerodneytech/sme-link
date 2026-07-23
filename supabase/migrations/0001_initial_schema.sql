@@ -50,7 +50,12 @@ create table public.products (
   business_id uuid not null references public.businesses(id) on delete cascade,
   name text not null check (char_length(name) between 2 and 140),
   sku text,
+  barcode text,
   category text,
+  product_type text not null default 'stocked' check (product_type in ('stocked', 'service')),
+  unit text not null default 'item' check (char_length(unit) between 1 and 30),
+  pack_size numeric(12, 3) not null default 1 check (pack_size > 0),
+  cost_price numeric(14, 2) not null default 0 check (cost_price >= 0),
   selling_price numeric(14, 2) not null default 0 check (selling_price >= 0),
   reorder_level numeric(12, 3) not null default 0 check (reorder_level >= 0),
   is_archived boolean not null default false,
@@ -58,6 +63,10 @@ create table public.products (
   updated_at timestamptz not null default now(),
   unique nulls not distinct (business_id, sku)
 );
+
+create unique index products_business_barcode_idx
+  on public.products(business_id, barcode)
+  where barcode is not null;
 
 create table public.sales (
   id uuid primary key default gen_random_uuid(),
@@ -344,7 +353,12 @@ select
   p.business_id,
   p.name,
   p.sku,
+  p.barcode,
   p.category,
+  p.product_type,
+  p.unit,
+  p.pack_size,
+  p.cost_price,
   p.selling_price,
   p.reorder_level,
   p.is_archived,

@@ -1,9 +1,13 @@
 import { DashboardChart } from "@/components/dashboard-chart";
 import { PageHeading } from "@/components/page-heading";
+import { getBusinessOverview } from "@/lib/business-overview";
+import { formatMoney } from "@/lib/format";
 import {
   AlertTriangle,
+  ArrowRight,
   ArrowUpRight,
   Boxes,
+  ClipboardList,
   PackageCheck,
   Plus,
   ReceiptText,
@@ -11,34 +15,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-const lowStock = [
-  { name: "Cooking oil 2L", detail: "3 remaining · threshold 5" },
-  { name: "Maize meal 10kg", detail: "4 remaining · threshold 8" },
-  { name: "Brown sugar 2kg", detail: "2 remaining · threshold 6" },
-];
+function percentageChange(current: number, previous: number) {
+  if (previous <= 0) return null;
+  return ((current - previous) / previous) * 100;
+}
 
-const activity = [
-  {
-    name: "Sale #SL-1048",
-    detail: "Today, 10:42",
-    value: "$186.00",
-    icon: ShoppingBag,
-  },
-  {
-    name: "Stock received",
-    detail: "Cooking oil · 12 units",
-    value: "+12",
-    icon: Boxes,
-  },
-  {
-    name: "Expense recorded",
-    detail: "Transport · Yesterday",
-    value: "$42.00",
-    icon: ReceiptText,
-  },
-];
+export default async function DashboardPage() {
+  const overview = await getBusinessOverview();
+  const change = percentageChange(overview.revenue, overview.previousRevenue);
+  const topExpense = overview.expenseCategories[0];
 
-export default function DashboardPage() {
   return (
     <div className="content">
       <PageHeading
@@ -48,73 +34,102 @@ export default function DashboardPage() {
             Record sale
           </Link>
         }
-        description="A clear view of your business activity for June 2026."
-        eyebrow="Business overview"
-        title="Good morning, Thabiso"
+        description="A clear view of what is happening in your business right now."
+        eyebrow={overview.source === "mock" ? "Demo business overview" : "Business overview"}
+        title={overview.source === "mock" ? "Good morning, Thabiso" : "Welcome back"}
       />
 
       <section className="summary-grid" aria-label="Business summary">
         <article className="card summary-card">
-          <p className="summary-label">Revenue</p>
-          <p className="summary-value">$8,450</p>
+          <p className="summary-label">Money in this month</p>
+          <p className="summary-value">{formatMoney(overview.revenue)}</p>
           <p className="trend">
-            <ArrowUpRight size={14} /> 17.4% from May
+            <ArrowUpRight size={14} />
+            {change === null
+              ? "First month being tracked"
+              : `${Math.abs(change).toFixed(1)}% ${change >= 0 ? "more" : "less"} than last month`}
           </p>
         </article>
         <article className="card summary-card">
-          <p className="summary-label">Expenses</p>
-          <p className="summary-value">$4,120</p>
+          <p className="summary-label">Money out this month</p>
+          <p className="summary-value">{formatMoney(overview.expenses)}</p>
           <p className="trend">
-            <ArrowUpRight size={14} /> Within monthly plan
+            <ReceiptText size={14} />
+            {topExpense ? `Most spent on ${topExpense.name.toLowerCase()}` : "No expenses recorded"}
           </p>
         </article>
         <article className="card summary-card">
-          <p className="summary-label">Net cash flow</p>
-          <p className="summary-value">$4,330</p>
-          <p className="trend">
-            <PackageCheck size={14} /> Positive this month
+          <p className="summary-label">Money left after expenses</p>
+          <p className="summary-value">{formatMoney(overview.netCashFlow)}</p>
+          <p className={overview.netCashFlow >= 0 ? "trend" : "trend trend-warning"}>
+            <PackageCheck size={14} />
+            {overview.netCashFlow >= 0 ? "Positive this month" : "Expenses are higher than sales"}
           </p>
         </article>
         <article className="card summary-card">
-          <p className="summary-label">Low-stock items</p>
-          <p className="summary-value">3</p>
+          <p className="summary-label">Low-stock products</p>
+          <p className="summary-value">{overview.lowStock.length}</p>
           <p className="trend trend-warning">
-            <AlertTriangle size={14} /> Needs attention
+            <AlertTriangle size={14} />
+            {overview.lowStock.length ? "Check what needs restocking" : "Stock levels look healthy"}
           </p>
         </article>
+      </section>
+
+      <section className="card card-pad action-panel">
+        <div className="section-heading">
+          <div>
+            <h2>What needs your attention</h2>
+            <p>Simple actions based on the records in your workspace</p>
+          </div>
+        </div>
+        <div className="action-list">
+          <Link href="/inventory">
+            <span className="list-icon action-warning"><Boxes size={18} /></span>
+            <span><strong>Check {overview.lowStock.length} low-stock {overview.lowStock.length === 1 ? "product" : "products"}</strong><small>Decide what to restock before it runs out.</small></span>
+            <ArrowRight size={18} />
+          </Link>
+          <Link href="/orders">
+            <span className="list-icon"><ClipboardList size={18} /></span>
+            <span><strong>Follow up on {overview.openOrders} open {overview.openOrders === 1 ? "order" : "orders"}</strong><small>Confirm payment, collection or delivery.</small></span>
+            <ArrowRight size={18} />
+          </Link>
+          <Link href="/expenses">
+            <span className="list-icon"><ReceiptText size={18} /></span>
+            <span><strong>Review where money went</strong><small>{topExpense ? `${topExpense.name} is the largest expense category.` : "Start recording expenses to see spending patterns."}</small></span>
+            <ArrowRight size={18} />
+          </Link>
+        </div>
       </section>
 
       <div className="grid-main">
         <section className="card card-pad">
           <div className="section-heading">
             <div>
-              <h2>Cash-flow movement</h2>
-              <p>Revenue compared with expenses over six months</p>
+              <h2>Money in and money out</h2>
+              <p>A six-month view of sales and expenses</p>
             </div>
-            <span className="badge">6 months</span>
+            <Link className="badge" href="/reports">See report</Link>
           </div>
-          <DashboardChart />
+          <DashboardChart data={overview.monthly} />
         </section>
 
         <section className="card card-pad">
           <div className="section-heading">
             <div>
               <h2>Low stock</h2>
-              <p>Products at or below their reorder level</p>
+              <p>At or below the level you set</p>
             </div>
-            <Link href="/inventory" className="badge badge-warning">
-              View all
-            </Link>
+            <Link href="/inventory" className="badge badge-warning">Restock</Link>
           </div>
           <div className="list">
-            {lowStock.map((item) => (
-              <div className="list-row" key={item.name}>
-                <span className="list-icon" style={{ background: "#FFF7E8", color: "#D97706" }}>
-                  <AlertTriangle size={18} />
-                </span>
+            {overview.lowStock.length === 0 && <p className="empty-copy">Nothing needs restocking right now.</p>}
+            {overview.lowStock.slice(0, 4).map((item) => (
+              <div className="list-row" key={item.id}>
+                <span className="list-icon action-warning"><AlertTriangle size={18} /></span>
                 <div className="list-body">
                   <p className="list-title">{item.name}</p>
-                  <p className="list-meta">{item.detail}</p>
+                  <p className="list-meta">{item.stock} {item.unit} left · restock level {item.threshold}</p>
                 </div>
               </div>
             ))}
@@ -126,23 +141,23 @@ export default function DashboardPage() {
         <div className="section-heading">
           <div>
             <h2>Recent activity</h2>
-            <p>The latest changes in your workspace</p>
+            <p>Your latest recorded sales and expenses</p>
           </div>
-          <span className="badge badge-success">Live summary</span>
+          <span className="badge badge-success">{overview.source === "mock" ? "Demo records" : "Up to date"}</span>
         </div>
         <div className="list">
-          {activity.map((item) => {
-            const Icon = item.icon;
+          {overview.recentActivity.map((item) => {
+            const Icon = item.kind === "sale" ? ShoppingBag : ReceiptText;
             return (
-              <div className="list-row" key={item.name}>
-                <span className="list-icon">
-                  <Icon size={18} />
-                </span>
+              <div className="list-row" key={`${item.kind}-${item.id}`}>
+                <span className="list-icon"><Icon size={18} /></span>
                 <div className="list-body">
-                  <p className="list-title">{item.name}</p>
+                  <p className="list-title">{item.label}</p>
                   <p className="list-meta">{item.detail}</p>
                 </div>
-                <span className="list-value">{item.value}</span>
+                <span className="list-value">
+                  {item.kind === "expense" ? "−" : "+"}{formatMoney(item.value)}
+                </span>
               </div>
             );
           })}

@@ -35,3 +35,20 @@ export const orders = [
   { id: "OR-0316", customer: "Rudo Moyo", date: "2026-06-20", items: 4, total: 84.2, status: "Completed" },
   { id: "OR-0315", customer: "Chiedza Dube", date: "2026-06-18", items: 3, total: 57.85, status: "Cancelled" },
 ];
+
+export const monthlyPerformance = [
+  { key: "2026-01", month: "Jan", revenue: 4100, expenses: 2700 },
+  { key: "2026-02", month: "Feb", revenue: 5200, expenses: 3100 },
+  { key: "2026-03", month: "Mar", revenue: 4700, expenses: 2950 },
+  { key: "2026-04", month: "Apr", revenue: 6900, expenses: 3600 },
+  { key: "2026-05", month: "May", revenue: 7200, expenses: 3900 },
+  { key: "2026-06", month: "Jun", revenue: 8450, expenses: 4120 },
+];
+
+export const expenseBreakdown = [
+  { name: "Stock purchases", value: 2140 },
+  { name: "Rent", value: 650 },
+  { name: "Transport", value: 540 },
+  { name: "Utilities", value: 430 },
+  { name: "Other", value: 360 },
+];

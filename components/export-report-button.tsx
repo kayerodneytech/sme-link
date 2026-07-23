@@ -2,18 +2,19 @@
 
 import { Download } from "lucide-react";
 
-const rows = [
-  ["Month", "Revenue", "Expenses", "Net cash flow"],
-  ["January", "4100.00", "2700.00", "1400.00"],
-  ["February", "5200.00", "3100.00", "2100.00"],
-  ["March", "4700.00", "2950.00", "1750.00"],
-  ["April", "6900.00", "3600.00", "3300.00"],
-  ["May", "7200.00", "3900.00", "3300.00"],
-  ["June", "8450.00", "4120.00", "4330.00"],
-];
+import type { MonthlyPerformance } from "@/lib/business-overview";
 
-export function ExportReportButton() {
+export function ExportReportButton({ data }: { data: MonthlyPerformance[] }) {
   function download() {
+    const rows = [
+      ["Month", "Revenue", "Expenses", "Net cash flow"],
+      ...data.map((month) => [
+        month.month,
+        month.revenue.toFixed(2),
+        month.expenses.toFixed(2),
+        (month.revenue - month.expenses).toFixed(2),
+      ]),
+    ];
     const csv = rows.map((row) => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);

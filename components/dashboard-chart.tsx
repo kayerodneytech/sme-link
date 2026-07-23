@@ -9,17 +9,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { MonthlyPerformance } from "@/lib/business-overview";
 
-const data = [
-  { month: "Jan", revenue: 4100, expenses: 2700 },
-  { month: "Feb", revenue: 5200, expenses: 3100 },
-  { month: "Mar", revenue: 4700, expenses: 2950 },
-  { month: "Apr", revenue: 6900, expenses: 3600 },
-  { month: "May", revenue: 7200, expenses: 3900 },
-  { month: "Jun", revenue: 8450, expenses: 4120 },
-];
-
-export function DashboardChart() {
+export function DashboardChart({ data }: { data: MonthlyPerformance[] }) {
   return (
     <div className="chart-wrap">
       <ResponsiveContainer width="100%" height="100%">
