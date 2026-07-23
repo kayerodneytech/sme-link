@@ -1,5 +1,6 @@
 import { PageHeading } from "@/components/page-heading";
 import { SaleForm } from "@/components/sale-form";
+import { ServiceInvoiceForm } from "@/components/service-invoice-form";
 import { isPosEligible } from "@/lib/pos";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -43,13 +44,13 @@ export default async function NewSalePage() {
       <PageHeading
         description={
           serviceMode
-            ? "Choose the service or tier sold and how the customer paid."
+            ? "Create an unpaid invoice. Mark it paid later to record the sale."
             : "Add the items sold and confirm how the customer paid."
         }
-        eyebrow="New transaction"
-        title={serviceMode ? "Record service sale" : "Record a sale"}
+        eyebrow={serviceMode ? "New invoice" : "New transaction"}
+        title={serviceMode ? "Create invoice" : "Record a sale"}
       />
-      <SaleForm serviceMode={serviceMode} />
+      {serviceMode ? <ServiceInvoiceForm /> : <SaleForm />}
     </div>
   );
 }

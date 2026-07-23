@@ -39,7 +39,7 @@ export default async function WorkspaceLayout({
     : membership.businesses;
 
   const tracksInventory = Boolean(business?.tracks_inventory);
-  const needs = (business?.primary_needs ?? []).filter((need) =>
+  const needs = ((business?.primary_needs ?? []) as string[]).filter((need) =>
     tracksInventory ? need !== "services" : need !== "inventory",
   );
 

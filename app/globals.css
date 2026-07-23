@@ -349,6 +349,65 @@ h2 {
   color: var(--red);
 }
 
+.invoice-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.invoice-sheet-head {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.invoice-sheet-head h1 {
+  font-size: 1.6rem;
+  margin: 0 0 6px;
+}
+
+.invoice-meta-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.invoice-total-row {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  font-size: 1.1rem;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+@media print {
+  .no-print,
+  .desktop-sidebar,
+  .mobile-nav,
+  .topbar {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app-main,
+  .content {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .invoice-sheet {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
 .mobile-nav {
   background: rgba(255, 255, 255, 0.96);
   border-top: 1px solid var(--line);
