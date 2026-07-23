@@ -49,7 +49,7 @@ export function OnboardingForm() {
       </div>
       {error && <p className="form-message form-message-error">{error}</p>}
       <button className="button button-primary" disabled={loading} style={{ marginTop: 6 }} type="submit">
-        {loading ? <LoaderCircle size={18} /> : <ArrowRight size={18} />}
+        {loading ? <LoaderCircle className="spin" size={18} /> : <ArrowRight size={18} />}
         Create workspace
       </button>
     </form>

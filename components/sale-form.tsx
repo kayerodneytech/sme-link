@@ -5,7 +5,7 @@ import { customers as sampleCustomers, products as sampleProducts } from "@/lib/
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentBusinessId } from "@/lib/supabase/workspace";
-import { Check, Minus, Plus, Trash2 } from "lucide-react";
+import { Check, LoaderCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -161,7 +161,7 @@ export function SaleForm() {
           </div>
           <div className="notice" style={{ margin: "16px 0" }}><Check size={18} /> Stock will be deducted only after the sale is completed.</div>
           {message && <p className={`form-message ${message.includes("completed") ? "form-message-success" : "form-message-error"}`}>{message}</p>}
-          <button className="button button-primary" disabled={saving} style={{ width: "100%" }} type="submit"><Check size={18} /> {saving ? "Completing…" : "Complete sale"}</button>
+          <button className="button button-primary" disabled={saving} style={{ width: "100%" }} type="submit">{saving ? <LoaderCircle className="spin" size={18} /> : <Check size={18} />} {saving ? "Completing…" : "Complete sale"}</button>
           <Link className="button button-secondary" href="/sales" style={{ marginTop: 9, width: "100%" }}>Cancel</Link>
         </section>
       </aside>
