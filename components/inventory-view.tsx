@@ -63,6 +63,8 @@ export function InventoryView() {
   const [movementType, setMovementType] = useState("stock_received");
   const [receivedPieces, setReceivedPieces] = useState("");
   const [paidForReceived, setPaidForReceived] = useState("");
+  const [deductOpeningFromCash, setDeductOpeningFromCash] = useState(false);
+  const [deductReceivedFromCash, setDeductReceivedFromCash] = useState(true);
   const [currencies, setCurrencies] = useState<string[]>(["USD"]);
   const [stockCurrency, setStockCurrency] = useState("USD");
 
@@ -295,9 +297,9 @@ export function InventoryView() {
       setMessage("Enter a whole number for how many pieces you have now.");
       return;
     }
-    if (productType === "stocked" && openingStock > 0 && paid <= 0) {
+    if (productType === "stocked" && openingStock > 0 && deductOpeningFromCash && paid <= 0) {
       setMessage(
-        "Enter how much you paid for the pack. That amount is recorded as a stock purchase expense.",
+        "Enter how much that stock cost if you want it deducted from cash.",
       );
       return;
     }
@@ -365,7 +367,7 @@ export function InventoryView() {
         if (stockError) throw stockError;
 
         const stockSpend = roundMoney(cost * openingStock);
-        if (stockSpend > 0) {
+        if (deductOpeningFromCash && stockSpend > 0) {
           await recordStockPurchaseExpense(
             supabase,
             businessId,
@@ -388,6 +390,7 @@ export function InventoryView() {
     setPiecesInPack("1");
     setPaidForPack("");
     setSellEachFor("");
+    setDeductOpeningFromCash(false);
   }
 
   async function addMovement(event: React.FormEvent<HTMLFormElement>) {
@@ -407,14 +410,24 @@ export function InventoryView() {
         setMessage("Enter a whole number of pieces you received.");
         return;
       }
-      if (!Number.isFinite(paid) || paid <= 0 || paidForReceived.trim() === "") {
-        setMessage(
-          "Enter how much you paid for these pieces. That amount is recorded as a stock purchase expense.",
-        );
+      if (deductReceivedFromCash) {
+        if (!Number.isFinite(paid) || paid <= 0 || paidForReceived.trim() === "") {
+          setMessage(
+            "Enter how much you paid. That amount will come out of cash.",
+          );
+          return;
+        }
+      } else if (
+        paidForReceived.trim() !== "" &&
+        (!Number.isFinite(paid) || paid < 0)
+      ) {
+        setMessage("Enter a valid amount paid, or leave it blank.");
         return;
       }
       quantity = pieces;
-      nextUnitCost = unitCostFromPack(pieces, paid);
+      if (Number.isFinite(paid) && paid > 0) {
+        nextUnitCost = unitCostFromPack(pieces, paid);
+      }
     } else {
       const enteredQuantity = Number(form.get("quantity") ?? 0);
       if (!Number.isInteger(enteredQuantity) || enteredQuantity <= 0) {
@@ -467,7 +480,7 @@ export function InventoryView() {
           .eq("id", productId);
         if (costError) throw costError;
       }
-      if (type === "stock_received") {
+      if (type === "stock_received" && deductReceivedFromCash) {
         const productName =
           items.find((item) => item.id === productId)?.name ?? "stock";
         await recordStockPurchaseExpense(
@@ -803,20 +816,24 @@ export function InventoryView() {
                   <div className="field">
                     <label htmlFor="received-paid">
                       How much did you pay for them?
+                      {!deductReceivedFromCash ? " (optional)" : ""}
                     </label>
                     <input
                       className="input"
                       id="received-paid"
-                      min="0.01"
+                      min="0"
                       onChange={(event) => setPaidForReceived(event.target.value)}
                       placeholder="e.g. 20"
-                      required
+                      required={deductReceivedFromCash}
                       step="0.01"
                       type="number"
                       value={paidForReceived}
                     />
                     <p className="field-hint">
-                      This is recorded as a stock purchase expense and comes out of that currency&apos;s cash.
+                      Used for cost per piece
+                      {deductReceivedFromCash
+                        ? " and deducted from cash when the box below is on."
+                        : ". Leave blank if you only need the quantity."}
                     </p>
                   </div>
                   <div className="field">
@@ -834,6 +851,22 @@ export function InventoryView() {
                       ))}
                     </select>
                   </div>
+                  <label className="check-row settings-check">
+                    <input
+                      checked={deductReceivedFromCash}
+                      onChange={(event) =>
+                        setDeductReceivedFromCash(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    <span>
+                      <strong>Deduct from cash balance</strong>
+                      <small>
+                        Turn off if this stock was already paid for before, or
+                        you are only correcting quantities.
+                      </small>
+                    </span>
+                  </label>
                 </>
               ) : (
                 <div className="field">
@@ -1022,7 +1055,10 @@ export function InventoryView() {
                     value={paidForPack}
                   />
                   <p className="field-hint">
-                    When you add stock now, that money is recorded as a stock purchase expense.
+                    Used to work out cost per piece
+                    {deductOpeningFromCash
+                      ? ". Starting stock will also come out of cash if the box below is on."
+                      : ". Leave “deduct from cash” off if you already owned this stock."}
                   </p>
                 </div>
                 <div className="field">
@@ -1041,6 +1077,22 @@ export function InventoryView() {
                   </select>
                 </div>
               </div>
+              <label className="check-row settings-check">
+                <input
+                  checked={deductOpeningFromCash}
+                  onChange={(event) =>
+                    setDeductOpeningFromCash(event.target.checked)
+                  }
+                  type="checkbox"
+                />
+                <span>
+                  <strong>Deduct starting stock from cash balance</strong>
+                  <small>
+                    Leave off if you already had this stock before using SMElink.
+                    Turn on only if you are buying it now.
+                  </small>
+                </span>
+              </label>
               <p className="pricing-result">
                 Each piece costs you about{" "}
                 <strong>{formatMoney(unitCost, stockCurrency)}</strong>
