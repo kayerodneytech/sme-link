@@ -97,33 +97,62 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
 
     setSaving(true);
     const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") ?? "").trim();
+    if (name.length < 2) {
+      setMessage("Business name must be at least 2 characters.");
+      setSaving(false);
+      return;
+    }
+
+    const ensuredCurrencies = currencies.includes(primaryCurrency)
+      ? currencies
+      : [...currencies, primaryCurrency];
+
     try {
       const businessId = await getCurrentBusinessId();
+      const payload: Record<string, unknown> = {
+        name,
+        phone: String(form.get("phone") ?? "").trim() || null,
+        location: String(form.get("location") ?? "").trim() || null,
+        currency: primaryCurrency,
+        currencies: ensuredCurrencies,
+        team_size: String(form.get("teamSize") ?? "just_me"),
+        sales_mode: String(form.get("salesMode") ?? "walk_in"),
+        primary_needs: selectedNeeds,
+        tracks_inventory: form.get("tracksInventory") === "on",
+      };
+
+      // Only send columns that exist on this project’s businesses table.
+      if (business && Object.prototype.hasOwnProperty.call(business, "vat_registered")) {
+        payload.vat_registered = vatRegistered;
+        payload.vat_rate = vatRegistered
+          ? parsedRate
+          : Number(business.vat_rate ?? 15);
+      }
+      if (business && Object.prototype.hasOwnProperty.call(business, "opening_cash")) {
+        payload.opening_cash = parsedOpeningCash;
+      }
+
       const { error } = await createClient()
         .from("businesses")
-        .update({
-          name: String(form.get("name") ?? ""),
-          phone: String(form.get("phone") ?? "") || null,
-          location: String(form.get("location") ?? "") || null,
-          currency: primaryCurrency,
-          currencies,
-          team_size: String(form.get("teamSize") ?? "just_me"),
-          sales_mode: String(form.get("salesMode") ?? "walk_in"),
-          primary_needs: selectedNeeds,
-          tracks_inventory: form.get("tracksInventory") === "on",
-          vat_registered: vatRegistered,
-          vat_rate: vatRegistered ? parsedRate : Number(business?.vat_rate ?? 15),
-          opening_cash: parsedOpeningCash,
-        })
+        .update(payload)
         .eq("id", businessId);
       if (error) throw error;
-      setMessage("Business settings saved.");
+
+      if (
+        Object.prototype.hasOwnProperty.call(business ?? {}, "opening_cash") ===
+          false &&
+        openingCash !== "0"
+      ) {
+        setMessage(
+          "Basic settings saved. Run migration 0007_opening_cash.sql in Supabase to store starting cash.",
+        );
+      } else {
+        setMessage("Business settings saved.");
+      }
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Settings could not be saved.",
-      );
+      const detail = supabaseErrorMessage(error);
+      setMessage(detail);
     } finally {
       setSaving(false);
     }
@@ -386,4 +415,24 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
 
 function formatRate(value: number) {
   return `${value.toFixed(2)}%`;
+}
+
+function supabaseErrorMessage(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : error &&
+          typeof error === "object" &&
+          "message" in error &&
+          typeof (error as { message: unknown }).message === "string"
+        ? (error as { message: string }).message
+        : "Settings could not be saved.";
+
+  if (/opening_cash|schema cache/i.test(message)) {
+    return `${message} Run supabase/migrations/0007_opening_cash.sql in the Supabase SQL editor, then refresh this page.`;
+  }
+  if (/vat_registered|vat_rate/i.test(message)) {
+    return `${message} Run supabase/migrations/0004_vat_settings.sql in the Supabase SQL editor, then refresh this page.`;
+  }
+  return message;
 }

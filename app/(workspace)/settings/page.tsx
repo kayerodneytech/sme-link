@@ -9,10 +9,12 @@ export default async function SettingsPage() {
     const supabase = await createClient();
     const { data: membership } = await supabase
       .from("business_members")
-      .select("businesses(*)")
+      .select(
+        "businesses(name, sector, phone, location, currency, currencies, team_size, sales_mode, primary_needs, tracks_inventory, vat_registered, vat_rate, opening_cash)",
+      )
       .eq("status", "active")
       .limit(1)
-      .single();
+      .maybeSingle();
     business = Array.isArray(membership?.businesses)
       ? membership.businesses[0]
       : membership?.businesses;
