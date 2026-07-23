@@ -1374,11 +1374,36 @@ textarea.input {
 
 .account-menu { position: relative; }
 .account-menu-trigger {
+  align-items: center;
   background: transparent;
   border: 0;
   cursor: pointer;
+  display: flex;
+  gap: 10px;
+  max-width: min(72vw, 280px);
   padding: 0;
   text-align: left;
+}
+.account-menu-copy {
+  min-width: 0;
+}
+.account-menu-copy .list-title,
+.account-menu-copy .list-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-menu-icon {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--navy);
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
 }
 .account-menu-popover { left: 0; right: auto; }
 .topbar-desktop-title { display: none; }

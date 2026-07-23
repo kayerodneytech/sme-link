@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Menu, Settings } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -30,16 +30,22 @@ export function MobileAccountMenu({
       <button
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label="Account menu"
         className="account-menu-trigger"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
-        <p className="list-title" style={{ marginBottom: 1 }}>
-          {businessName}
-        </p>
-        <p className="list-meta">
-          {demoMode ? "Demo workspace" : businessLocation}
-        </p>
+        <span className="account-menu-copy">
+          <p className="list-title" style={{ marginBottom: 1 }}>
+            {businessName}
+          </p>
+          <p className="list-meta">
+            {demoMode ? "Demo workspace" : businessLocation}
+          </p>
+        </span>
+        <span className="account-menu-icon" aria-hidden="true">
+          <Menu size={20} />
+        </span>
       </button>
       {open && (
         <div className="business-menu-popover account-menu-popover" role="menu">

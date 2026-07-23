@@ -38,20 +38,24 @@ export default async function WorkspaceLayout({
     ? membership.businesses[0]
     : membership.businesses;
 
+  const tracksInventory = Boolean(business?.tracks_inventory);
+  const needs = (business?.primary_needs ?? []).filter((need) =>
+    tracksInventory ? need !== "services" : need !== "inventory",
+  );
+
   return (
     <AppShell
       businessLocation={business?.location ?? "Zimbabwe"}
       businessName={business?.name ?? "SME workspace"}
       enabledAreas={[
-        ...(business?.primary_needs ?? []),
-        ...(business?.tracks_inventory ? ["inventory"] : ["services"]),
+        ...needs,
+        ...(tracksInventory ? ["inventory"] : ["services"]),
         ...(["orders", "both"].includes(business?.sales_mode ?? "")
           ? ["orders", "customers"]
           : []),
-        // Service businesses almost always need a customer list.
-        ...(!business?.tracks_inventory ? ["customers"] : []),
+        ...(!tracksInventory ? ["customers"] : []),
       ]}
-      tracksInventory={Boolean(business?.tracks_inventory)}
+      tracksInventory={tracksInventory}
       userRole={membership.role === "owner" ? "Owner" : "Staff"}
       posEnabled={isPosEligible(business)}
     >

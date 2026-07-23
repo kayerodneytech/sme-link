@@ -68,11 +68,19 @@ export function AppShell({
   tracksInventory?: boolean;
 }) {
   const pathname = usePathname();
+  const areas = new Set(enabledAreas ?? []);
+  // Never show Stock for service businesses, even if primary_needs still lists inventory.
+  if (!tracksInventory) {
+    areas.delete("inventory");
+    areas.add("services");
+  } else {
+    areas.delete("services");
+  }
+
   const visibleItems = (
-    enabledAreas && enabledAreas.length > 0
+    areas.size > 0
       ? mainItems.filter(
-          (item) =>
-            item.area === "dashboard" || enabledAreas.includes(item.area),
+          (item) => item.area === "dashboard" || areas.has(item.area),
         )
       : mainItems.filter((item) =>
           tracksInventory ? item.area !== "services" : item.area !== "inventory",
