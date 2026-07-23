@@ -14,12 +14,7 @@ create table public.profiles (
 create table public.businesses (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 2 and 120),
-  sector text not null check (sector in ('retail', 'wholesale', 'services', 'manufacturing', 'hospitality', 'other')),
-  team_size text not null default 'just_me' check (team_size in ('just_me', '2_5', '6_20', 'more_than_20')),
-  sales_mode text not null default 'walk_in' check (sales_mode in ('walk_in', 'orders', 'both')),
-  primary_needs text[] not null default array['sales', 'inventory', 'expenses', 'reports']::text[]
-    check (primary_needs <@ array['sales', 'inventory', 'orders', 'expenses', 'customers', 'reports']::text[]),
-  tracks_inventory boolean not null default true,
+  sector text not null check (sector in ('retail', 'services', 'manufacturing', 'hospitality', 'other')),
   phone text,
   location text,
   currency char(3) not null default 'USD',
@@ -55,12 +50,7 @@ create table public.products (
   business_id uuid not null references public.businesses(id) on delete cascade,
   name text not null check (char_length(name) between 2 and 140),
   sku text,
-  barcode text,
   category text,
-  product_type text not null default 'stocked' check (product_type in ('stocked', 'service')),
-  unit text not null default 'item' check (char_length(unit) between 1 and 30),
-  pack_size numeric(12, 3) not null default 1 check (pack_size > 0),
-  cost_price numeric(14, 2) not null default 0 check (cost_price >= 0),
   selling_price numeric(14, 2) not null default 0 check (selling_price >= 0),
   reorder_level numeric(12, 3) not null default 0 check (reorder_level >= 0),
   is_archived boolean not null default false,
@@ -68,10 +58,6 @@ create table public.products (
   updated_at timestamptz not null default now(),
   unique nulls not distinct (business_id, sku)
 );
-
-create unique index products_business_barcode_idx
-  on public.products(business_id, barcode)
-  where barcode is not null;
 
 create table public.sales (
   id uuid primary key default gen_random_uuid(),
@@ -203,9 +189,6 @@ create index expenses_business_date_idx on public.expenses(business_id, expense_
 create index orders_business_date_idx on public.orders(business_id, created_at desc);
 create index order_items_order_idx on public.order_items(order_id);
 create index notifications_user_date_idx on public.notifications(user_id, created_at desc);
-create unique index notifications_one_open_entity_idx
-  on public.notifications(business_id, notification_type, entity_type, entity_id)
-  where read_at is null and entity_id is not null;
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -253,66 +236,6 @@ create trigger expenses_set_created_by before insert on public.expenses
 for each row execute function public.set_created_by();
 create trigger orders_set_created_by before insert on public.orders
 for each row execute function public.set_created_by();
-
-create or replace function public.update_low_stock_notification()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  product_record public.products%rowtype;
-  stock_on_hand numeric(12, 3);
-begin
-  select * into product_record
-  from public.products
-  where id = new.product_id;
-
-  if product_record.product_type <> 'stocked' then
-    return new;
-  end if;
-
-  select coalesce(sum(quantity_change), 0)
-  into stock_on_hand
-  from public.inventory_movements
-  where product_id = new.product_id;
-
-  if stock_on_hand <= product_record.reorder_level then
-    insert into public.notifications (
-      business_id, notification_type, title, message, entity_type, entity_id
-    )
-    values (
-      product_record.business_id,
-      'low_stock',
-      'Low stock: ' || product_record.name,
-      stock_on_hand || ' ' || product_record.unit ||
-        ' remaining. Your restock level is ' || product_record.reorder_level || '.',
-      'product',
-      product_record.id
-    )
-    on conflict (business_id, notification_type, entity_type, entity_id)
-      where read_at is null and entity_id is not null
-    do update set
-      title = excluded.title,
-      message = excluded.message,
-      created_at = now();
-  else
-    update public.notifications
-    set read_at = now()
-    where business_id = product_record.business_id
-      and notification_type = 'low_stock'
-      and entity_type = 'product'
-      and entity_id = product_record.id
-      and read_at is null;
-  end if;
-
-  return new;
-end;
-$$;
-
-create trigger inventory_update_low_stock_notification
-after insert on public.inventory_movements
-for each row execute function public.update_low_stock_notification();
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -370,11 +293,7 @@ create or replace function public.create_business(
   business_sector text,
   business_phone text default null,
   business_location text default null,
-  business_currency text default 'USD',
-  business_team_size text default 'just_me',
-  business_sales_mode text default 'walk_in',
-  business_needs text[] default array['sales', 'inventory', 'expenses', 'reports']::text[],
-  business_tracks_inventory boolean default true
+  business_currency text default 'USD'
 )
 returns uuid
 language plpgsql
@@ -390,8 +309,7 @@ begin
   end if;
 
   insert into public.businesses (
-    name, sector, phone, location, currency, team_size, sales_mode,
-    primary_needs, tracks_inventory, created_by
+    name, sector, phone, location, currency, created_by
   )
   values (
     trim(business_name),
@@ -399,10 +317,6 @@ begin
     nullif(trim(business_phone), ''),
     nullif(trim(business_location), ''),
     upper(business_currency),
-    business_team_size,
-    business_sales_mode,
-    business_needs,
-    business_tracks_inventory,
     auth.uid()
   )
   returning id into new_business_id;
@@ -430,12 +344,7 @@ select
   p.business_id,
   p.name,
   p.sku,
-  p.barcode,
   p.category,
-  p.product_type,
-  p.unit,
-  p.pack_size,
-  p.cost_price,
   p.selling_price,
   p.reorder_level,
   p.is_archived,
@@ -474,7 +383,7 @@ begin
   end if;
 
   for item in
-    select si.product_id, si.quantity, p.business_id, p.name, p.product_type
+    select si.product_id, si.quantity, p.business_id, p.name
     from public.sale_items si
     join public.products p on p.id = si.product_id
     where si.sale_id = target_sale_id
@@ -484,15 +393,13 @@ begin
       raise exception 'A sale item belongs to another business';
     end if;
 
-    if item.product_type = 'stocked' then
-      select coalesce(sum(quantity_change), 0)
-      into available_stock
-      from public.inventory_movements
-      where product_id = item.product_id;
+    select coalesce(sum(quantity_change), 0)
+    into available_stock
+    from public.inventory_movements
+    where product_id = item.product_id;
 
-      if available_stock < item.quantity then
-        raise exception 'Not enough stock for %', item.name;
-      end if;
+    if available_stock < item.quantity then
+      raise exception 'Not enough stock for %', item.name;
     end if;
   end loop;
 
@@ -514,9 +421,7 @@ begin
     'Completed sale',
     auth.uid()
   from public.sale_items si
-  join public.products p on p.id = si.product_id
-  where si.sale_id = target_sale_id
-    and p.product_type = 'stocked';
+  where si.sale_id = target_sale_id;
 
   update public.sales
   set
@@ -725,9 +630,9 @@ for update using (
   and (user_id is null or user_id = auth.uid())
 );
 
-revoke all on function public.create_business(text, text, text, text, text, text, text, text[], boolean) from public;
+revoke all on function public.create_business(text, text, text, text, text) from public;
 revoke all on function public.complete_sale(uuid) from public;
 revoke all on function public.convert_order_to_sale(uuid, text) from public;
-grant execute on function public.create_business(text, text, text, text, text, text, text, text[], boolean) to authenticated;
+grant execute on function public.create_business(text, text, text, text, text) to authenticated;
 grant execute on function public.complete_sale(uuid) to authenticated;
 grant execute on function public.convert_order_to_sale(uuid, text) to authenticated;

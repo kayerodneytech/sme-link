@@ -15,7 +15,8 @@ one workspace. The university research chapters supporting the project are in
 1. Install packages with `npm install`.
 2. Copy `.env.example` to `.env.local`.
 3. Add the project URL and publishable key from Supabase.
-4. Run `supabase/migrations/0001_initial_schema.sql` in a new Supabase project.
+4. Run the SQL files in `supabase/migrations/` in filename order. If `0001` has
+   already been applied, run only the later migrations that have not been run.
 5. Start the application with `npm run dev`.
 
 Without environment values, the application opens in a demonstration workspace
