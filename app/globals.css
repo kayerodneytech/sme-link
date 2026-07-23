@@ -1278,7 +1278,15 @@ h2 {
 .pos-header .business-menu-popover { left: 0; right: auto; }
 .pos-header strong { color: var(--navy-deep); display: block; font-size: .93rem; }
 .pos-header small { color: var(--muted); display: block; font-size: .72rem; margin-top: 2px; }
+.pos-shortcuts { align-items: center; display: flex; gap: 12px; }
 .pos-shortcuts span { color: var(--muted); font-size: .72rem; }
+.pos-history-link {
+  color: var(--teal);
+  font-size: .78rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+.pos-history-link:hover { text-decoration: underline; }
 kbd {
   background: #f2f4f7; border: 1px solid #d0d5dd; border-radius: 5px;
   color: #475467; font-family: inherit; font-size: .68rem; padding: 2px 6px;

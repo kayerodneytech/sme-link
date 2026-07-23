@@ -38,6 +38,9 @@ const mobileIcons = {
 };
 
 function isActive(pathname: string, href: string) {
+  if (href === "/pos") {
+    return pathname === "/pos" || pathname.startsWith("/pos/");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -59,13 +62,18 @@ export function AppShell({
   posEnabled?: boolean;
 }) {
   const pathname = usePathname();
-  const visibleItems =
+  const visibleItems = (
     enabledAreas && enabledAreas.length > 0
       ? mainItems.filter(
           (item) =>
             item.area === "dashboard" || enabledAreas.includes(item.area),
         )
-      : mainItems;
+      : mainItems
+  ).map((item) =>
+    item.area === "sales" && posEnabled
+      ? { ...item, href: "/pos", label: "POS" }
+      : item,
+  );
   const mobileItems = [
     { href: "/dashboard", label: "Home", icon: LayoutDashboard },
     ...visibleItems
@@ -73,7 +81,12 @@ export function AppShell({
       .slice(0, 3)
       .map((item) => ({
         href: item.href,
-        label: item.area === "inventory" ? "Stock" : item.label,
+        label:
+          item.area === "inventory"
+            ? "Stock"
+            : item.area === "sales" && posEnabled
+              ? "POS"
+              : item.label,
         icon: mobileIcons[item.area as keyof typeof mobileIcons],
       })),
     { href: "/more", label: "More", icon: Menu },

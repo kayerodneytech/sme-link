@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { isPosEligible } from "@/lib/pos";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -49,7 +50,7 @@ export default async function WorkspaceLayout({
           : []),
       ]}
       userRole={membership.role === "owner" ? "Owner" : "Staff"}
-      posEnabled={["retail", "wholesale", "hospitality"].includes(business?.sector ?? "") && business?.tracks_inventory}
+      posEnabled={isPosEligible(business)}
     >
       {children}
     </AppShell>

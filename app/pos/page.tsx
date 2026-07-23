@@ -1,21 +1,47 @@
 import { PosTerminal } from "@/components/pos-terminal";
+import { isPosEligible } from "@/lib/pos";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export default async function PosPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Fetch membership and business in two steps. A nested select with .single()
+  // was failing for some sessions and silently sending people back to /sales.
   const { data: membership } = await supabase
     .from("business_members")
-    .select("business_id, businesses(name, sector, currency, currencies, tracks_inventory)")
+    .select("business_id")
     .eq("user_id", user.id)
     .eq("status", "active")
     .limit(1)
-    .single();
-  const business = Array.isArray(membership?.businesses) ? membership.businesses[0] : membership?.businesses;
-  if (!membership || !business?.tracks_inventory || !["retail", "wholesale", "hospitality"].includes(business.sector)) redirect("/sales");
+    .maybeSingle();
 
-  return <PosTerminal businessId={membership.business_id} businessName={business.name} primaryCurrency={business.currency} />;
+  if (!membership) {
+    redirect("/onboarding");
+  }
+
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("name, sector, currency, tracks_inventory")
+    .eq("id", membership.business_id)
+    .maybeSingle();
+
+  if (!business || !isPosEligible(business)) {
+    redirect("/sales");
+  }
+
+  return (
+    <PosTerminal
+      businessId={membership.business_id}
+      businessName={business.name}
+      primaryCurrency={business.currency}
+    />
+  );
 }

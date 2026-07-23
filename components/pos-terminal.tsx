@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { formatMoney } from "@/lib/format";
 import { Barcode, Check, LoaderCircle, Minus, Plus, Printer, Search, ShoppingCart, Trash2, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataLoadingState } from "./data-loading-state";
 import { BusinessMenu } from "./business-menu";
@@ -120,7 +121,12 @@ export function PosTerminal({ businessId, businessName, primaryCurrency }: {
     <main className="pos-shell">
       <header className="pos-header">
         <div><BusinessMenu mode="pos" posEnabled /><div><strong>{businessName}</strong><small>Retail point of sale</small></div></div>
-        <div className="pos-shortcuts"><span><kbd>/</kbd> Search</span><span><kbd>F2</kbd> Pay</span><span><kbd>Esc</kbd> Clear search</span></div>
+        <div className="pos-shortcuts">
+          <Link className="pos-history-link" href="/sales">Sales history</Link>
+          <span><kbd>/</kbd> Search</span>
+          <span><kbd>F2</kbd> Pay</span>
+          <span><kbd>Esc</kbd> Clear search</span>
+        </div>
       </header>
 
       <div className="pos-workspace">

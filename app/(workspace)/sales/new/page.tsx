@@ -1,15 +1,39 @@
 import { PageHeading } from "@/components/page-heading";
 import { SaleForm } from "@/components/sale-form";
+import { isPosEligible } from "@/lib/pos";
+import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
 
 export default async function NewSalePage() {
-  const membership = hasSupabaseConfig()
-    ? (await (await createClient()).from("business_members").select("businesses(sector, tracks_inventory)").eq("status", "active").limit(1).maybeSingle()).data
-    : null;
-  const business = Array.isArray(membership?.businesses) ? membership.businesses[0] : membership?.businesses;
-  if (business?.tracks_inventory && ["retail", "wholesale", "hospitality"].includes(business?.sector ?? "")) redirect("/pos");
+  if (hasSupabaseConfig()) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: membership } = await supabase
+        .from("business_members")
+        .select("business_id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+
+      if (membership) {
+        const { data: business } = await supabase
+          .from("businesses")
+          .select("sector, tracks_inventory")
+          .eq("id", membership.business_id)
+          .maybeSingle();
+
+        if (isPosEligible(business)) {
+          redirect("/pos");
+        }
+      }
+    }
+  }
 
   return (
     <div className="content">
