@@ -86,3 +86,16 @@ test("pack buying turns a crate price into cost per piece", () => {
 test("profit per piece is sell price minus what it cost you", () => {
   assert.equal(profitPerPiece(0.8, 0.4), 0.4);
 });
+
+function productLabel(name, sizeValue, sizeUnit) {
+  if (sizeValue == null || sizeValue <= 0 || !sizeUnit) return name;
+  const amount = Number.isInteger(sizeValue)
+    ? String(sizeValue)
+    : String(Number(sizeValue.toFixed(3)).toString());
+  return `${name} ${amount}${sizeUnit}`;
+}
+
+test("product labels include size so same names stay distinct", () => {
+  assert.equal(productLabel("Pepsi", 500, "ml"), "Pepsi 500ml");
+  assert.equal(productLabel("Pepsi", 1, "L"), "Pepsi 1L");
+});

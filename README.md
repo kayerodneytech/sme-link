@@ -17,7 +17,7 @@ one workspace. The university research chapters supporting the project are in
 3. Add the project URL and publishable key from Supabase.
 4. Run the SQL files in `supabase/migrations/` in filename order. If `0001` has
    already been applied, run only the later migrations that have not been run.
-   Recent migrations add VAT receipt settings and product groups for inventory.
+   Recent migrations add VAT receipt settings, product groups, and product sizes.
 5. Start the application with `npm run dev`.
 
 Without environment values, the application opens in a demonstration workspace

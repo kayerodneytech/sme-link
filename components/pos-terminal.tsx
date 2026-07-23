@@ -5,6 +5,7 @@ import {
   splitVatInclusive,
 } from "@/lib/calculations";
 import { formatMoney } from "@/lib/format";
+import { formatProductSize, productLabel } from "@/lib/product-label";
 import { createClient } from "@/lib/supabase/client";
 import {
   Barcode,
@@ -26,6 +27,8 @@ import { DataLoadingState } from "./data-loading-state";
 type Product = {
   id: string;
   name: string;
+  label: string;
+  sizeLabel: string;
   sku: string;
   barcode: string;
   category: string;
@@ -82,7 +85,7 @@ export function PosTerminal({
       supabase
         .from("product_stock")
         .select(
-          "id, name, sku, barcode, category, selling_price, quantity_on_hand, unit, product_type",
+          "id, name, sku, barcode, category, selling_price, quantity_on_hand, unit, product_type, size_value, size_unit",
         )
         .eq("business_id", businessId)
         .eq("is_archived", false)
@@ -96,16 +99,23 @@ export function PosTerminal({
         .order("name"),
     ]).then(([productResult, customerResult]) => {
       setProducts(
-        (productResult.data ?? []).map((product) => ({
-          id: product.id,
-          name: product.name,
-          sku: product.sku ?? "",
-          barcode: product.barcode ?? "",
-          category: product.category ?? "Other",
-          price: Number(product.selling_price),
-          stock: Number(product.quantity_on_hand),
-          unit: product.unit,
-        })),
+        (productResult.data ?? []).map((product) => {
+          const sizeValue =
+            product.size_value == null ? null : Number(product.size_value);
+          const sizeUnit = product.size_unit ?? null;
+          return {
+            id: product.id,
+            name: product.name,
+            label: productLabel(product.name, sizeValue, sizeUnit),
+            sizeLabel: formatProductSize(sizeValue, sizeUnit),
+            sku: product.sku ?? "",
+            barcode: product.barcode ?? "",
+            category: product.category ?? "Other",
+            price: Number(product.selling_price),
+            stock: Number(product.quantity_on_hand),
+            unit: product.unit,
+          };
+        }),
       );
       setCustomers(customerResult.data ?? []);
       setLoading(false);
@@ -139,7 +149,7 @@ export function PosTerminal({
     const term = query.trim().toLowerCase();
     const matches =
       !term ||
-      `${product.name} ${product.sku} ${product.barcode} ${product.category}`
+      `${product.label} ${product.name} ${product.sizeLabel} ${product.sku} ${product.barcode} ${product.category}`
         .toLowerCase()
         .includes(term);
     return matches && (category === "All" || product.category === category);
@@ -339,8 +349,12 @@ export function PosTerminal({
                 <span className="pos-product-icon">
                   {product.name.slice(0, 2).toUpperCase()}
                 </span>
-                <strong>{product.name}</strong>
-                <small>{product.sku || product.category}</small>
+                <strong>{product.label}</strong>
+                <small>
+                  {product.sizeLabel
+                    ? `${product.sizeLabel} · ${product.sku || product.category}`
+                    : product.sku || product.category}
+                </small>
                 <div>
                   <b>{formatMoney(product.price, currency)}</b>
                   <span>
@@ -379,7 +393,7 @@ export function PosTerminal({
             {cart.map((line) => (
               <article className="pos-cart-line" key={line.id}>
                 <div>
-                  <strong>{line.name}</strong>
+                  <strong>{line.label}</strong>
                   <small>{formatMoney(line.price, currency)} each</small>
                 </div>
                 <div className="pos-quantity">
@@ -526,7 +540,7 @@ export function PosTerminal({
               {receipt.lines.map((line) => (
                 <div key={line.id}>
                   <span>
-                    {line.quantity} × {line.name}
+                    {line.quantity} × {line.label}
                   </span>
                   <b>{formatMoney(line.price * line.quantity, currency)}</b>
                 </div>

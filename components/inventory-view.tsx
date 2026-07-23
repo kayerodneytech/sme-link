@@ -4,6 +4,7 @@ import {
   profitPerPiece,
   unitCostFromPack,
 } from "@/lib/pricing";
+import { productLabel, SIZE_UNITS } from "@/lib/product-label";
 import { products as initialProducts } from "@/lib/sample-data";
 import { formatMoney } from "@/lib/format";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
@@ -23,6 +24,8 @@ type InventoryItem = {
   productType: string;
   unit: string;
   packSize: number;
+  sizeValue: number | null;
+  sizeUnit: string | null;
   cost: number;
   price: number;
   stock: number;
@@ -62,7 +65,7 @@ export function InventoryView() {
   const products = useMemo(
     () =>
       items.filter((product) =>
-        `${product.name} ${product.sku} ${product.category}`
+        `${product.name} ${productLabel(product.name, product.sizeValue, product.sizeUnit)} ${product.sku} ${product.category}`
           .toLowerCase()
           .includes(query.toLowerCase()),
       ),
@@ -85,7 +88,7 @@ export function InventoryView() {
       supabase
         .from("product_stock")
         .select(
-          "id, name, sku, barcode, category, product_type, unit, pack_size, cost_price, selling_price, reorder_level, quantity_on_hand",
+          "id, name, sku, barcode, category, product_type, unit, pack_size, size_value, size_unit, cost_price, selling_price, reorder_level, quantity_on_hand",
         )
         .eq("is_archived", false)
         .order("name"),
@@ -109,6 +112,8 @@ export function InventoryView() {
               productType: product.product_type,
               unit: product.unit,
               packSize: Number(product.pack_size),
+              sizeValue: product.size_value == null ? null : Number(product.size_value),
+              sizeUnit: product.size_unit ?? null,
               cost: Number(product.cost_price),
               price: Number(product.selling_price),
               stock,
@@ -228,15 +233,26 @@ export function InventoryView() {
     const productType = String(form.get("productType") ?? "stocked");
     const code = String(form.get("code") ?? "").trim();
     const barcode = String(form.get("barcode") ?? "").trim();
+    const sizeValueRaw = String(form.get("sizeValue") ?? "").trim();
+    const sizeUnit = String(form.get("sizeUnit") ?? "").trim();
     const packSize = Number(piecesInPack);
     const paid = Number(paidForPack);
     const price = Number(sellEachFor);
     const threshold = Number(form.get("threshold") ?? 0);
     const openingStock = Number(form.get("openingStock") ?? 0);
     const cost = unitCostFromPack(packSize, paid);
+    const sizeValue = sizeValueRaw === "" ? null : Number(sizeValueRaw);
 
     if (!category) {
       setMessage("Choose a product group, or add one first.");
+      return;
+    }
+    if (sizeValue === null || !sizeUnit) {
+      setMessage("Add the size of each piece, for example 500 and ml.");
+      return;
+    }
+    if (!Number.isFinite(sizeValue) || sizeValue <= 0) {
+      setMessage("Enter a size greater than zero.");
       return;
     }
     if (!Number.isInteger(packSize) || packSize <= 0) {
@@ -272,6 +288,8 @@ export function InventoryView() {
           productType,
           unit: "piece",
           packSize,
+          sizeValue,
+          sizeUnit,
           cost,
           price,
           threshold,
@@ -299,6 +317,8 @@ export function InventoryView() {
           product_type: productType,
           unit: "piece",
           pack_size: packSize,
+          size_value: sizeValue,
+          size_unit: sizeUnit,
           cost_price: cost,
           selling_price: price,
           reorder_level: threshold,
@@ -491,6 +511,7 @@ export function InventoryView() {
             <thead>
               <tr>
                 <th>Product</th>
+                <th>Size</th>
                 <th>Group</th>
                 <th>You paid each</th>
                 <th>You sell each</th>
@@ -502,7 +523,14 @@ export function InventoryView() {
             <tbody>
               {products.map((product) => (
                 <tr key={product.id}>
-                  <td className="table-name">{product.name}</td>
+                  <td className="table-name">
+                    {productLabel(product.name, product.sizeValue, product.sizeUnit)}
+                  </td>
+                  <td>
+                    {product.sizeValue && product.sizeUnit
+                      ? `${product.sizeValue}${product.sizeUnit}`
+                      : "—"}
+                  </td>
                   <td>{product.category}</td>
                   <td>{formatMoney(product.cost)}</td>
                   <td>{formatMoney(product.price)}</td>
@@ -538,7 +566,9 @@ export function InventoryView() {
             <article className="card record-card" key={product.id}>
               <div className="record-card-head">
                 <div>
-                  <p className="list-title">{product.name}</p>
+                  <p className="list-title">
+                    {productLabel(product.name, product.sizeValue, product.sizeUnit)}
+                  </p>
                   <p className="list-meta">{product.category}</p>
                 </div>
                 <span
@@ -678,7 +708,7 @@ export function InventoryView() {
                     .filter((product) => product.productType === "stocked")
                     .map((product) => (
                       <option key={product.id} value={product.id}>
-                        {product.name}
+                        {productLabel(product.name, product.sizeValue, product.sizeUnit)}
                       </option>
                     ))}
                 </select>
@@ -804,7 +834,7 @@ export function InventoryView() {
                   className="input"
                   id="product-name"
                   name="name"
-                  placeholder="e.g. Pepsi 500ml"
+                  placeholder="e.g. Pepsi"
                   required
                 />
               </div>
@@ -814,6 +844,38 @@ export function InventoryView() {
                   <option value="stocked">Something I keep in stock</option>
                   <option value="service">A service</option>
                 </select>
+              </div>
+              <div className="field">
+                <label htmlFor="product-size-value">Size of each piece</label>
+                <div className="size-inputs">
+                  <input
+                    className="input"
+                    id="product-size-value"
+                    inputMode="decimal"
+                    min="0.001"
+                    name="sizeValue"
+                    placeholder="500"
+                    required
+                    step="0.001"
+                    type="number"
+                  />
+                  <select
+                    className="select"
+                    defaultValue="ml"
+                    id="product-size-unit"
+                    name="sizeUnit"
+                    required
+                  >
+                    {SIZE_UNITS.map((unit) => (
+                      <option key={unit.value} value={unit.value}>
+                        {unit.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="field-hint">
+                  Use this so Pepsi 500ml and Pepsi 1L stay separate with their own prices.
+                </p>
               </div>
               <div className="field">
                 <label htmlFor="product-category">Product group</label>

@@ -592,6 +592,12 @@ h2 {
   flex: 1;
 }
 
+.size-inputs {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 0.9fr);
+}
+
 .group-list {
   display: grid;
   gap: 8px;

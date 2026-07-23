@@ -1,6 +1,7 @@
 "use client";
 
 import { formatMoney } from "@/lib/format";
+import { productLabel } from "@/lib/product-label";
 import { customers as sampleCustomers, products as sampleProducts } from "@/lib/sample-data";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
@@ -11,15 +12,33 @@ import Link from "next/link";
 import { DataLoadingState } from "./data-loading-state";
 
 type Line = { productId: string; quantity: number };
-type ProductOption = { id: string; name: string; price: number; stock: number };
+type ProductOption = {
+  id: string;
+  name: string;
+  label: string;
+  price: number;
+  stock: number;
+};
 type CustomerOption = { id: string; name: string };
 
 export function SaleForm() {
   const [lines, setLines] = useState<Line[]>(() =>
     hasSupabaseConfig() ? [{ productId: "", quantity: 1 }] : [{ productId: "p4", quantity: 1 }],
   );
-  const [productOptions, setProductOptions] = useState<ProductOption[]>(() => hasSupabaseConfig() ? [] : sampleProducts);
-  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>(() => hasSupabaseConfig() ? [] : sampleCustomers);
+  const [productOptions, setProductOptions] = useState<ProductOption[]>(() =>
+    hasSupabaseConfig()
+      ? []
+      : sampleProducts.map((product) => ({
+          id: product.id,
+          name: product.name,
+          label: productLabel(product.name, product.sizeValue, product.sizeUnit),
+          price: product.price,
+          stock: product.stock,
+        })),
+  );
+  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>(() =>
+    hasSupabaseConfig() ? [] : sampleCustomers,
+  );
   const [loading, setLoading] = useState(hasSupabaseConfig());
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -38,7 +57,7 @@ export function SaleForm() {
     Promise.all([
       supabase
         .from("product_stock")
-        .select("id, name, selling_price, quantity_on_hand")
+        .select("id, name, selling_price, quantity_on_hand, size_value, size_unit")
         .eq("is_archived", false)
         .order("name"),
       supabase
@@ -52,6 +71,11 @@ export function SaleForm() {
           productResult.data.map((product) => ({
             id: product.id,
             name: product.name,
+            label: productLabel(
+              product.name,
+              product.size_value == null ? null : Number(product.size_value),
+              product.size_unit,
+            ),
             price: Number(product.selling_price),
             stock: Number(product.quantity_on_hand),
           })),
@@ -144,7 +168,7 @@ export function SaleForm() {
               return (
                 <div className="card record-card" key={`${index}-${line.productId}`}>
                   <div className="form-grid" style={{ alignItems: "end" }}>
-                    <div className="field"><label htmlFor={`product-${index}`}>Product</label><select className="select" id={`product-${index}`} onChange={(event) => updateLine(index, { productId: event.target.value })} value={line.productId}><option value="">Choose product</option>{productOptions.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.stock} available</option>)}</select></div>
+                    <div className="field"><label htmlFor={`product-${index}`}>Product</label><select className="select" id={`product-${index}`} onChange={(event) => updateLine(index, { productId: event.target.value })} value={line.productId}><option value="">Choose product</option>{productOptions.map((item) => <option key={item.id} value={item.id}>{item.label} · {item.stock} available</option>)}</select></div>
                     <div style={{ alignItems: "end", display: "flex", gap: 10 }}>
                       <div className="field" style={{ flex: 1 }}><label htmlFor={`quantity-${index}`}>Quantity</label><div style={{ alignItems: "center", display: "flex", gap: 6 }}><button className="icon-button" onClick={() => updateLine(index, { quantity: Math.max(1, line.quantity - 1) })} type="button"><Minus size={16} /></button><input className="input" id={`quantity-${index}`} min="1" onChange={(event) => updateLine(index, { quantity: Math.max(1, Number(event.target.value)) })} style={{ textAlign: "center" }} type="number" value={line.quantity} /><button className="icon-button" onClick={() => updateLine(index, { quantity: line.quantity + 1 })} type="button"><Plus size={16} /></button></div></div>
                       <button aria-label="Remove item" className="icon-button" onClick={() => setLines((current) => current.filter((_, i) => i !== index))} style={{ color: "#B42318" }} type="button"><Trash2 size={17} /></button>
