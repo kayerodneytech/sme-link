@@ -1,6 +1,11 @@
 import "server-only";
 
 import {
+  calculateCashOnHand,
+  calculateTakeHome,
+  STOCK_PURCHASES_CATEGORY,
+} from "@/lib/cash";
+import {
   expenseBreakdown,
   expenses as mockExpenses,
   monthlyPerformance,
@@ -22,12 +27,17 @@ export type BusinessOverview = {
   source: "mock" | "supabase";
   revenue: number;
   expenses: number;
+  /** Running costs this month, excluding stock purchases. */
+  operatingExpenses: number;
   netCashFlow: number;
+  openingCash: number;
+  cashOnHand: number;
+  tracksInventory: boolean;
   /** What the sold stock cost you this month. */
   costOfGoods: number;
   /** Money left from sales after stock cost, before other expenses. */
   salesProfit: number;
-  /** Sales profit minus recorded expenses. */
+  /** Sales profit minus operating expenses (not stock purchases). */
   estimatedTakeHome: number;
   previousRevenue: number;
   lowStock: {
@@ -55,14 +65,25 @@ function mockOverview(): BusinessOverview {
   const previous = monthlyPerformance.at(-2)!;
   const costOfGoods = Math.round(current.revenue * 0.62);
   const salesProfit = current.revenue - costOfGoods;
+  const stockPurchases = 2140;
+  const operatingExpenses = Math.max(current.expenses - stockPurchases, 0);
+  const openingCash = 1200;
   return {
     source: "mock",
     revenue: current.revenue,
     expenses: current.expenses,
+    operatingExpenses,
     netCashFlow: current.revenue - current.expenses,
+    openingCash,
+    cashOnHand: calculateCashOnHand(openingCash, current.revenue, current.expenses),
+    tracksInventory: true,
     costOfGoods,
     salesProfit,
-    estimatedTakeHome: salesProfit - current.expenses,
+    estimatedTakeHome: calculateTakeHome(
+      current.revenue,
+      costOfGoods,
+      operatingExpenses,
+    ),
     previousRevenue: previous.revenue,
     lowStock: mockProducts
       .filter((product) => product.stock <= product.threshold)
@@ -142,43 +163,68 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
   const months = lastSixMonths();
   const periodStart = `${months[0].key}-01T00:00:00.000Z`;
 
-  const [salesResult, expensesResult, stockResult, ordersResult, itemsResult] =
-    await Promise.all([
-      supabase
-        .from("sales")
-        .select("id, sale_number, total, completed_at")
-        .eq("business_id", businessId)
-        .eq("status", "completed")
-        .gte("completed_at", periodStart)
-        .order("completed_at", { ascending: false }),
-      supabase
-        .from("expenses")
-        .select("id, description, amount, expense_date, expense_categories(name)")
-        .eq("business_id", businessId)
-        .gte("expense_date", periodStart.slice(0, 10))
-        .order("expense_date", { ascending: false }),
-      supabase
-        .from("product_stock")
-        .select("id, name, quantity_on_hand, reorder_level, unit")
-        .eq("business_id", businessId)
-        .eq("is_archived", false),
-      supabase
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("business_id", businessId)
-        .in("status", ["pending", "confirmed"]),
-      supabase
-        .from("sale_items")
-        .select(
-          "quantity, unit_price, products!inner(name, business_id, cost_price), sales!inner(status, completed_at)",
-        )
-        .eq("products.business_id", businessId)
-        .eq("sales.status", "completed"),
-    ]);
+  const [
+    businessResult,
+    salesResult,
+    expensesResult,
+    allSalesResult,
+    allExpensesResult,
+    stockResult,
+    ordersResult,
+    itemsResult,
+  ] = await Promise.all([
+    supabase
+      .from("businesses")
+      .select("opening_cash, tracks_inventory")
+      .eq("id", businessId)
+      .single(),
+    supabase
+      .from("sales")
+      .select("id, sale_number, total, completed_at")
+      .eq("business_id", businessId)
+      .eq("status", "completed")
+      .gte("completed_at", periodStart)
+      .order("completed_at", { ascending: false }),
+    supabase
+      .from("expenses")
+      .select("id, description, amount, expense_date, expense_categories(name)")
+      .eq("business_id", businessId)
+      .gte("expense_date", periodStart.slice(0, 10))
+      .order("expense_date", { ascending: false }),
+    supabase
+      .from("sales")
+      .select("total")
+      .eq("business_id", businessId)
+      .eq("status", "completed"),
+    supabase
+      .from("expenses")
+      .select("amount")
+      .eq("business_id", businessId),
+    supabase
+      .from("product_stock")
+      .select("id, name, quantity_on_hand, reorder_level, unit")
+      .eq("business_id", businessId)
+      .eq("is_archived", false),
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .in("status", ["pending", "confirmed"]),
+    supabase
+      .from("sale_items")
+      .select(
+        "quantity, unit_price, products!inner(name, business_id, cost_price), sales!inner(status, completed_at)",
+      )
+      .eq("products.business_id", businessId)
+      .eq("sales.status", "completed"),
+  ]);
 
   const firstError = [
+    businessResult.error,
     salesResult.error,
     expensesResult.error,
+    allSalesResult.error,
+    allExpensesResult.error,
     stockResult.error,
     ordersResult.error,
     itemsResult.error,
@@ -192,6 +238,7 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
   }
 
   const categoryTotals = new Map<string, number>();
+  let operatingExpenses = 0;
   for (const expense of expensesResult.data ?? []) {
     const month = months.find(
       (item) => item.key === String(expense.expense_date).slice(0, 7),
@@ -205,6 +252,9 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
       category,
       (categoryTotals.get(category) ?? 0) + Number(expense.amount),
     );
+    if (category !== STOCK_PURCHASES_CATEGORY) {
+      operatingExpenses += Number(expense.amount);
+    }
   }
 
   const productTotals = new Map<string, number>();
@@ -232,9 +282,25 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
   }
 
   const bestSellerEntry = [...productTotals.entries()].sort((a, b) => b[1] - a[1])[0];
-
   const current = months.at(-1)!;
   const previous = months.at(-2)!;
+  const openingCash = Number(businessResult.data?.opening_cash ?? 0);
+  const tracksInventory = Boolean(businessResult.data?.tracks_inventory);
+  const lifetimeSales = (allSalesResult.data ?? []).reduce(
+    (sum, sale) => sum + Number(sale.total),
+    0,
+  );
+  const lifetimeExpenses = (allExpensesResult.data ?? []).reduce(
+    (sum, expense) => sum + Number(expense.amount),
+    0,
+  );
+
+  // Service businesses have no COGS from stock; sales profit is just revenue.
+  if (!tracksInventory) {
+    salesProfit = current.revenue;
+    costOfGoods = 0;
+  }
+
   const recentSales = (salesResult.data ?? []).slice(0, 3).map((sale) => ({
     id: sale.id,
     label: `Sale #${sale.sale_number}`,
@@ -256,23 +322,33 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
     source: "supabase",
     revenue: current.revenue,
     expenses: current.expenses,
+    operatingExpenses,
     netCashFlow: current.revenue - current.expenses,
+    openingCash,
+    cashOnHand: calculateCashOnHand(openingCash, lifetimeSales, lifetimeExpenses),
+    tracksInventory,
     costOfGoods,
     salesProfit,
-    estimatedTakeHome: salesProfit - current.expenses,
+    estimatedTakeHome: calculateTakeHome(
+      current.revenue,
+      costOfGoods,
+      operatingExpenses,
+    ),
     previousRevenue: previous.revenue,
-    lowStock: (stockResult.data ?? [])
-      .filter(
-        (product) =>
-          Number(product.quantity_on_hand) <= Number(product.reorder_level),
-      )
-      .map((product) => ({
-        id: product.id,
-        name: product.name,
-        stock: Number(product.quantity_on_hand),
-        threshold: Number(product.reorder_level),
-        unit: product.unit ?? "items",
-      })),
+    lowStock: tracksInventory
+      ? (stockResult.data ?? [])
+          .filter(
+            (product) =>
+              Number(product.quantity_on_hand) <= Number(product.reorder_level),
+          )
+          .map((product) => ({
+            id: product.id,
+            name: product.name,
+            stock: Number(product.quantity_on_hand),
+            threshold: Number(product.reorder_level),
+            unit: product.unit ?? "items",
+          }))
+      : [],
     openOrders: ordersResult.count ?? 0,
     bestSeller: bestSellerEntry
       ? { name: bestSellerEntry[0], quantity: bestSellerEntry[1] }

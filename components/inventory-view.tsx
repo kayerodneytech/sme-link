@@ -5,6 +5,8 @@ import {
   unitCostFromPack,
 } from "@/lib/pricing";
 import { productLabel, SIZE_UNITS } from "@/lib/product-label";
+import { recordStockPurchaseExpense } from "@/lib/stock-expense";
+import { roundMoney } from "@/lib/calculations";
 import { products as initialProducts } from "@/lib/sample-data";
 import { formatMoney } from "@/lib/format";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
@@ -275,6 +277,12 @@ export function InventoryView() {
       setMessage("Enter a whole number for how many pieces you have now.");
       return;
     }
+    if (productType === "stocked" && openingStock > 0 && paid <= 0) {
+      setMessage(
+        "Enter how much you paid for the pack. That amount is recorded as a stock purchase expense.",
+      );
+      return;
+    }
 
     if (!hasSupabaseConfig()) {
       setItems((current) => [
@@ -337,6 +345,16 @@ export function InventoryView() {
             note: "Starting stock",
           });
         if (stockError) throw stockError;
+
+        const stockSpend = roundMoney(cost * openingStock);
+        if (stockSpend > 0) {
+          await recordStockPurchaseExpense(
+            supabase,
+            businessId,
+            `Stock for ${productLabel(name, sizeValue, sizeUnit)}`,
+            stockSpend,
+          );
+        }
       }
       window.location.reload();
     } catch (error) {
@@ -369,10 +387,14 @@ export function InventoryView() {
         setMessage("Enter a whole number of pieces you received.");
         return;
       }
-      quantity = pieces;
-      if (Number.isFinite(paid) && paid >= 0 && paidForReceived.trim() !== "") {
-        nextUnitCost = unitCostFromPack(pieces, paid);
+      if (!Number.isFinite(paid) || paid <= 0 || paidForReceived.trim() === "") {
+        setMessage(
+          "Enter how much you paid for these pieces. That amount is recorded as a stock purchase expense.",
+        );
+        return;
       }
+      quantity = pieces;
+      nextUnitCost = unitCostFromPack(pieces, paid);
     } else {
       const enteredQuantity = Number(form.get("quantity") ?? 0);
       if (!Number.isInteger(enteredQuantity) || enteredQuantity <= 0) {
@@ -424,6 +446,16 @@ export function InventoryView() {
           .update({ cost_price: nextUnitCost, pack_size: quantity })
           .eq("id", productId);
         if (costError) throw costError;
+      }
+      if (type === "stock_received") {
+        const productName =
+          items.find((item) => item.id === productId)?.name ?? "stock";
+        await recordStockPurchaseExpense(
+          supabase,
+          businessId,
+          `Bought more ${productName}`,
+          Number(paidForReceived),
+        );
       }
       window.location.reload();
     } catch (error) {
@@ -748,20 +780,21 @@ export function InventoryView() {
                   </div>
                   <div className="field">
                     <label htmlFor="received-paid">
-                      How much did you pay for them? (optional)
+                      How much did you pay for them?
                     </label>
                     <input
                       className="input"
                       id="received-paid"
-                      min="0"
+                      min="0.01"
                       onChange={(event) => setPaidForReceived(event.target.value)}
                       placeholder="e.g. 20"
+                      required
                       step="0.01"
                       type="number"
                       value={paidForReceived}
                     />
                     <p className="field-hint">
-                      If you fill this in, we update what each piece cost you.
+                      This is recorded as a stock purchase expense and comes out of your cash.
                     </p>
                   </div>
                 </>
@@ -951,6 +984,9 @@ export function InventoryView() {
                     type="number"
                     value={paidForPack}
                   />
+                  <p className="field-hint">
+                    When you add stock now, that money is recorded as a stock purchase expense.
+                  </p>
                 </div>
               </div>
               <p className="pricing-result">

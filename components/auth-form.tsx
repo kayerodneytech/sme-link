@@ -34,6 +34,7 @@ type Registration = {
   currencies: string[];
   tracksInventory: boolean;
   needs: string[];
+  openingCash: string;
 };
 
 const initialRegistration: Registration = {
@@ -50,6 +51,7 @@ const initialRegistration: Registration = {
   currencies: ["USD"],
   tracksInventory: true,
   needs: ["sales", "inventory", "expenses", "reports"],
+  openingCash: "",
 };
 
 const needOptions = [
@@ -163,6 +165,16 @@ export function AuthForm() {
       setMessage({ type: "error", text: "Add the business name before continuing." });
       return;
     }
+    if (step === 2) {
+      const openingCash = Number(registration.openingCash);
+      if (!Number.isFinite(openingCash) || openingCash < 0) {
+        setMessage({
+          type: "error",
+          text: "Enter the money you have to start with (cash in hand). Use 0 if you are starting with nothing.",
+        });
+        return;
+      }
+    }
     setStep((current) => Math.min(3, current + 1));
   }
 
@@ -217,6 +229,7 @@ export function AuthForm() {
           business_sales_mode: registration.salesMode,
           business_needs: registration.needs,
           business_tracks_inventory: registration.tracksInventory,
+          business_opening_cash: Number(registration.openingCash),
         },
       },
     });
@@ -297,6 +310,24 @@ export function AuthForm() {
           <div className="form-grid">
             <div className="field"><label htmlFor="team-size">How many people work here?</label><select className="select" id="team-size" onChange={(event) => update("teamSize", event.target.value)} value={registration.teamSize}><option value="just_me">Just me</option><option value="2_5">2–5 people</option><option value="6_20">6–20 people</option><option value="more_than_20">More than 20</option></select></div>
             <div className="field"><label htmlFor="sales-mode">How do customers usually buy?</label><select className="select" id="sales-mode" onChange={(event) => update("salesMode", event.target.value)} value={registration.salesMode}><option value="walk_in">Mostly walk-in sales</option><option value="orders">Mostly customer orders</option><option value="both">Both walk-ins and orders</option></select></div>
+          </div>
+          <div className="field">
+            <label htmlFor="opening-cash">Starting money (cash in hand)</label>
+            <input
+              className="input"
+              id="opening-cash"
+              inputMode="decimal"
+              min="0"
+              onChange={(event) => update("openingCash", event.target.value)}
+              placeholder="e.g. 500"
+              required
+              step="0.01"
+              type="number"
+              value={registration.openingCash}
+            />
+            <p className="field-hint">
+              The money the business has now. Sales add to it. Expenses and stock purchases come out of it.
+            </p>
           </div>
         </>
       )}

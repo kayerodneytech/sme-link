@@ -18,6 +18,12 @@ export function OnboardingForm() {
     }
 
     const form = new FormData(event.currentTarget);
+    const openingCash = Number(form.get("openingCash") ?? "");
+    if (!Number.isFinite(openingCash) || openingCash < 0) {
+      setError("Enter the starting money / cash in hand. Use 0 if you are starting with nothing.");
+      return;
+    }
+
     const supabase = createClient();
     setLoading(true);
     const { error: rpcError } = await supabase.rpc("create_business", {
@@ -27,6 +33,7 @@ export function OnboardingForm() {
       business_location: String(form.get("location") ?? ""),
       business_currency: String(form.get("currency") ?? "USD"),
       business_currencies: form.getAll("currencies").map(String),
+      business_opening_cash: openingCash,
     });
     setLoading(false);
 
@@ -57,6 +64,23 @@ export function OnboardingForm() {
         <fieldset className="field"><legend>Accepted currencies</legend><label><input defaultChecked name="currencies" type="checkbox" value="USD" /> USD</label><label><input name="currencies" type="checkbox" value="ZIG" /> ZIG</label><label><input name="currencies" type="checkbox" value="ZAR" /> ZAR</label></fieldset>
         <div className="field"><label htmlFor="onboarding-phone">Business phone</label><input className="input" id="onboarding-phone" name="phone" type="tel" /></div>
         <div className="field"><label htmlFor="onboarding-location">Location</label><input className="input" id="onboarding-location" name="location" placeholder="Harare, Zimbabwe" /></div>
+        <div className="field">
+          <label htmlFor="onboarding-opening-cash">Starting money (cash in hand)</label>
+          <input
+            className="input"
+            id="onboarding-opening-cash"
+            inputMode="decimal"
+            min="0"
+            name="openingCash"
+            placeholder="e.g. 500"
+            required
+            step="0.01"
+            type="number"
+          />
+          <p className="field-hint">
+            Sales add to this. Expenses and stock purchases come out of it.
+          </p>
+        </div>
       </div>
       {error && <p className="form-message form-message-error">{error}</p>}
       <button className="button button-primary" disabled={loading} style={{ marginTop: 6 }} type="submit">

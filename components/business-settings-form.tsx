@@ -20,6 +20,7 @@ type Business = {
   tracks_inventory?: boolean;
   vat_registered?: boolean;
   vat_rate?: number;
+  opening_cash?: number;
 } | null;
 
 const needs = [
@@ -45,6 +46,7 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
     business?.vat_registered ?? false,
   );
   const [vatRate, setVatRate] = useState(String(business?.vat_rate ?? 15));
+  const [openingCash, setOpeningCash] = useState(String(business?.opening_cash ?? 0));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -82,6 +84,12 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
       return;
     }
 
+    const parsedOpeningCash = Number(openingCash);
+    if (!Number.isFinite(parsedOpeningCash) || parsedOpeningCash < 0) {
+      setMessage("Enter a valid starting cash amount (0 or more).");
+      return;
+    }
+
     if (!hasSupabaseConfig()) {
       setMessage("Settings saved for this preview.");
       return;
@@ -105,6 +113,7 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
           tracks_inventory: form.get("tracksInventory") === "on",
           vat_registered: vatRegistered,
           vat_rate: vatRegistered ? parsedRate : Number(business?.vat_rate ?? 15),
+          opening_cash: parsedOpeningCash,
         })
         .eq("id", businessId);
       if (error) throw error;
@@ -171,6 +180,22 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
               id="business-location"
               name="location"
             />
+          </div>
+          <div className="field">
+            <label htmlFor="opening-cash">Starting money (cash in hand)</label>
+            <input
+              className="input"
+              id="opening-cash"
+              inputMode="decimal"
+              min="0"
+              onChange={(event) => setOpeningCash(event.target.value)}
+              step="0.01"
+              type="number"
+              value={openingCash}
+            />
+            <p className="field-hint">
+              Used to calculate cash in hand. Sales add to it. Expenses and stock purchases come out of it.
+            </p>
           </div>
         </div>
       </section>

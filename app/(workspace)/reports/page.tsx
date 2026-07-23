@@ -24,29 +24,41 @@ export default async function ReportsPage() {
       />
       <section className="summary-grid">
         <article className="card summary-card">
+          <p className="summary-label">Cash in hand</p>
+          <p className="summary-value">{formatMoney(overview.cashOnHand)}</p>
+          <p className="trend">
+            Started with {formatMoney(overview.openingCash)} · sales add, spending subtracts
+          </p>
+        </article>
+        <article className="card summary-card">
           <p className="summary-label">Money from sales · this month</p>
           <p className="summary-value">{formatMoney(overview.revenue)}</p>
           <p className="trend">
             <TrendingUp size={14} /> What customers paid you
           </p>
         </article>
+        {overview.tracksInventory ? (
+          <article className="card summary-card">
+            <p className="summary-label">What sold stock cost you</p>
+            <p className="summary-value">{formatMoney(overview.costOfGoods)}</p>
+            <p className="trend">Used for profit, separate from cash spent buying stock</p>
+          </article>
+        ) : (
+          <article className="card summary-card">
+            <p className="summary-label">Running expenses · this month</p>
+            <p className="summary-value">{formatMoney(overview.operatingExpenses)}</p>
+            <p className="trend">Rent, transport and other costs</p>
+          </article>
+        )}
         <article className="card summary-card">
-          <p className="summary-label">What that stock cost you</p>
-          <p className="summary-value">{formatMoney(overview.costOfGoods)}</p>
-          <p className="trend">Based on what you paid for each piece</p>
-        </article>
-        <article className="card summary-card">
-          <p className="summary-label">Profit from sales</p>
-          <p className="summary-value">{formatMoney(overview.salesProfit)}</p>
-          <p className="trend">Sales minus stock cost</p>
-        </article>
-        <article className="card summary-card">
-          <p className="summary-label">After other expenses</p>
+          <p className="summary-label">Estimated take-home · this month</p>
           <p className="summary-value">{formatMoney(overview.estimatedTakeHome)}</p>
           <p className="trend">
             {overview.estimatedTakeHome >= 0
-              ? "Estimated money left this month"
-              : "Expenses are higher than sales profit"}
+              ? overview.tracksInventory
+                ? "Sales profit after stock cost and other expenses"
+                : "Sales after recorded expenses"
+              : "Costs are higher than sales this month"}
           </p>
         </article>
       </section>
@@ -56,14 +68,17 @@ export default async function ReportsPage() {
           <PackageCheck size={20} />
           <div>
             <strong>
-              {overview.salesProfit >= 0
-                ? `Sales left about ${formatMoney(overview.salesProfit)} after stock cost.`
-                : "Stock is costing more than customers are paying."}
+              {overview.tracksInventory
+                ? overview.salesProfit >= 0
+                  ? `Sales left about ${formatMoney(overview.salesProfit)} after the cost of sold stock.`
+                  : "Sold stock is costing more than customers are paying."
+                : `Sales this month total ${formatMoney(overview.revenue)}.`}
             </strong>
             <p>
+              Cash in hand is now {formatMoney(overview.cashOnHand)}.
               {overview.estimatedTakeHome >= 0
-                ? `After other expenses, about ${formatMoney(overview.estimatedTakeHome)} remains.`
-                : `Other expenses of ${formatMoney(overview.expenses)} are eating into that profit.`}
+                ? ` Estimated take-home after running costs is ${formatMoney(overview.estimatedTakeHome)}.`
+                : ` Running costs of ${formatMoney(overview.operatingExpenses)} are higher than sales profit.`}
             </p>
           </div>
         </article>

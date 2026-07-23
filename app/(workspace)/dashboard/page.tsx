@@ -41,6 +41,14 @@ export default async function DashboardPage() {
 
       <section className="summary-grid" aria-label="Business summary">
         <article className="card summary-card">
+          <p className="summary-label">Cash in hand</p>
+          <p className="summary-value">{formatMoney(overview.cashOnHand)}</p>
+          <p className="trend">
+            <PackageCheck size={14} />
+            Started with {formatMoney(overview.openingCash)}
+          </p>
+        </article>
+        <article className="card summary-card">
           <p className="summary-label">Money in this month</p>
           <p className="summary-value">{formatMoney(overview.revenue)}</p>
           <p className="trend">
@@ -59,19 +67,28 @@ export default async function DashboardPage() {
           </p>
         </article>
         <article className="card summary-card">
-          <p className="summary-label">Money left after expenses</p>
-          <p className="summary-value">{formatMoney(overview.netCashFlow)}</p>
-          <p className={overview.netCashFlow >= 0 ? "trend" : "trend trend-warning"}>
-            <PackageCheck size={14} />
-            {overview.netCashFlow >= 0 ? "Positive this month" : "Expenses are higher than sales"}
+          <p className="summary-label">
+            {overview.tracksInventory ? "Low-stock products" : "Profit after costs"}
           </p>
-        </article>
-        <article className="card summary-card">
-          <p className="summary-label">Low-stock products</p>
-          <p className="summary-value">{overview.lowStock.length}</p>
-          <p className="trend trend-warning">
-            <AlertTriangle size={14} />
-            {overview.lowStock.length ? "Check what needs restocking" : "Stock levels look healthy"}
+          <p className="summary-value">
+            {overview.tracksInventory
+              ? overview.lowStock.length
+              : formatMoney(overview.estimatedTakeHome)}
+          </p>
+          <p className={overview.tracksInventory ? "trend trend-warning" : "trend"}>
+            {overview.tracksInventory ? (
+              <>
+                <AlertTriangle size={14} />
+                {overview.lowStock.length
+                  ? "Check what needs restocking"
+                  : "Stock levels look healthy"}
+              </>
+            ) : (
+              <>
+                <ShoppingBag size={14} />
+                Sales minus recorded expenses
+              </>
+            )}
           </p>
         </article>
       </section>
@@ -84,11 +101,13 @@ export default async function DashboardPage() {
           </div>
         </div>
         <div className="action-list">
-          <Link href="/inventory">
-            <span className="list-icon action-warning"><Boxes size={18} /></span>
-            <span><strong>Check {overview.lowStock.length} low-stock {overview.lowStock.length === 1 ? "product" : "products"}</strong><small>Decide what to restock before it runs out.</small></span>
-            <ArrowRight size={18} />
-          </Link>
+          {overview.tracksInventory && (
+            <Link href="/inventory">
+              <span className="list-icon action-warning"><Boxes size={18} /></span>
+              <span><strong>Check {overview.lowStock.length} low-stock {overview.lowStock.length === 1 ? "product" : "products"}</strong><small>Decide what to restock before it runs out.</small></span>
+              <ArrowRight size={18} />
+            </Link>
+          )}
           <Link href="/orders">
             <span className="list-icon"><ClipboardList size={18} /></span>
             <span><strong>Follow up on {overview.openOrders} open {overview.openOrders === 1 ? "order" : "orders"}</strong><small>Confirm payment, collection or delivery.</small></span>

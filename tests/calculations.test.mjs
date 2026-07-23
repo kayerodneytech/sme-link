@@ -99,3 +99,19 @@ test("product labels include size so same names stay distinct", () => {
   assert.equal(productLabel("Pepsi", 500, "ml"), "Pepsi 500ml");
   assert.equal(productLabel("Pepsi", 1, "L"), "Pepsi 1L");
 });
+
+function calculateCashOnHand(openingCash, salesTotal, expensesTotal) {
+  return roundMoney(openingCash + salesTotal - expensesTotal);
+}
+
+function calculateTakeHome(salesRevenue, costOfGoods, operatingExpenses) {
+  return roundMoney(salesRevenue - costOfGoods - operatingExpenses);
+}
+
+test("cash in hand starts with capital then adds sales and subtracts spending", () => {
+  assert.equal(calculateCashOnHand(500, 200, 80), 620);
+});
+
+test("take-home ignores stock purchases by using COGS instead", () => {
+  assert.equal(calculateTakeHome(200, 80, 40), 80);
+});
