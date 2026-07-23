@@ -15,9 +15,8 @@ export default async function SettingsPage() {
       .eq("status", "active")
       .limit(1)
       .maybeSingle();
-    business = Array.isArray(membership?.businesses)
-      ? membership.businesses[0]
-      : membership?.businesses;
+    const related = membership?.businesses;
+    business = Array.isArray(related) ? related[0] ?? null : related ?? null;
   }
 
   return (
