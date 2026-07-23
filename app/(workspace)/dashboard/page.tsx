@@ -50,7 +50,7 @@ export default function DashboardPage() {
         }
         description="A clear view of your business activity for June 2026."
         eyebrow="Business overview"
-        title="Good morning, Tariro"
+        title="Good morning, Thabiso"
       />
 
       <section className="summary-grid" aria-label="Business summary">

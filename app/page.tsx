@@ -125,7 +125,7 @@ export default function Home() {
             <div className="landing-product-top">
               <div>
                 <span className="landing-product-label">Business overview</span>
-                <strong>Good morning, Tariro</strong>
+                <strong>Good morning, Thabiso</strong>
               </div>
               <span className="landing-avatar">TF</span>
             </div>

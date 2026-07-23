@@ -43,7 +43,7 @@ function isActive(pathname: string, href: string) {
 
 export function AppShell({
   children,
-  businessName = "Tariro Foods",
+  businessName = "Thabiso Foods",
   businessLocation = "Harare, Zimbabwe",
   userRole = "Owner",
   demoMode = false,
