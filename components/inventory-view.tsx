@@ -239,8 +239,8 @@ export function InventoryView() {
       setMessage("Choose a product group, or add one first.");
       return;
     }
-    if (!Number.isFinite(packSize) || packSize <= 0) {
-      setMessage("Enter how many pieces came in the pack you bought.");
+    if (!Number.isInteger(packSize) || packSize <= 0) {
+      setMessage("Enter a whole number of pieces in the pack.");
       return;
     }
     if (!Number.isFinite(paid) || paid < 0) {
@@ -249,6 +249,14 @@ export function InventoryView() {
     }
     if (!Number.isFinite(price) || price < 0) {
       setMessage("Enter how much you will sell each piece for.");
+      return;
+    }
+    if (!Number.isInteger(threshold) || threshold < 0) {
+      setMessage("Enter a whole number for the low-stock warning.");
+      return;
+    }
+    if (!Number.isInteger(openingStock) || openingStock < 0) {
+      setMessage("Enter a whole number for how many pieces you have now.");
       return;
     }
 
@@ -337,8 +345,8 @@ export function InventoryView() {
     if (type === "stock_received") {
       const pieces = Number(receivedPieces);
       const paid = Number(paidForReceived);
-      if (!Number.isFinite(pieces) || pieces <= 0) {
-        setMessage("Enter how many pieces you received.");
+      if (!Number.isInteger(pieces) || pieces <= 0) {
+        setMessage("Enter a whole number of pieces you received.");
         return;
       }
       quantity = pieces;
@@ -347,8 +355,8 @@ export function InventoryView() {
       }
     } else {
       const enteredQuantity = Number(form.get("quantity") ?? 0);
-      if (!Number.isFinite(enteredQuantity) || enteredQuantity <= 0) {
-        setMessage("Enter how many pieces changed.");
+      if (!Number.isInteger(enteredQuantity) || enteredQuantity <= 0) {
+        setMessage("Enter a whole number of pieces.");
         return;
       }
       quantity =
@@ -697,10 +705,13 @@ export function InventoryView() {
                     <input
                       className="input"
                       id="received-pieces"
-                      min="0.001"
-                      onChange={(event) => setReceivedPieces(event.target.value)}
+                      inputMode="numeric"
+                      min="1"
+                      onChange={(event) =>
+                        setReceivedPieces(event.target.value.replace(/[^\d]/g, ""))
+                      }
                       required
-                      step="0.001"
+                      step="1"
                       type="number"
                       value={receivedPieces}
                     />
@@ -730,10 +741,11 @@ export function InventoryView() {
                   <input
                     className="input"
                     id="movement-quantity"
-                    min="0.001"
+                    inputMode="numeric"
+                    min="1"
                     name="quantity"
                     required
-                    step="0.001"
+                    step="1"
                     type="number"
                   />
                 </div>
@@ -851,10 +863,13 @@ export function InventoryView() {
                   <input
                     className="input"
                     id="product-pack-size"
-                    min="0.001"
-                    onChange={(event) => setPiecesInPack(event.target.value)}
+                    inputMode="numeric"
+                    min="1"
+                    onChange={(event) =>
+                      setPiecesInPack(event.target.value.replace(/[^\d]/g, "") || "1")
+                    }
                     required
-                    step="0.001"
+                    step="1"
                     type="number"
                     value={piecesInPack}
                   />
@@ -909,10 +924,11 @@ export function InventoryView() {
                     className="input"
                     defaultValue="5"
                     id="product-threshold"
+                    inputMode="numeric"
                     min="0"
                     name="threshold"
                     required
-                    step="0.001"
+                    step="1"
                     type="number"
                   />
                 </div>
@@ -924,9 +940,10 @@ export function InventoryView() {
                     className="input"
                     defaultValue="0"
                     id="product-opening-stock"
+                    inputMode="numeric"
                     min="0"
                     name="openingStock"
-                    step="0.001"
+                    step="1"
                     type="number"
                   />
                 </div>
