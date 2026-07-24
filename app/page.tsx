@@ -9,7 +9,6 @@ import {
   ReceiptText,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -86,10 +85,6 @@ export default function Home() {
       <section className="landing-hero">
         <div className="landing-hero-grid">
           <div className="landing-hero-copy">
-            <div className="landing-kicker">
-              <Sparkles size={15} />
-              Built around how small businesses really work
-            </div>
             <h1>Run your business with clarity, not guesswork.</h1>
             <p>
               Keep sales, expenses, orders, customers and stock in one place.
