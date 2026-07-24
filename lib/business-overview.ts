@@ -214,7 +214,9 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
       .order("completed_at", { ascending: false }),
     supabase
       .from("expenses")
-      .select("id, description, amount, currency, expense_date, expense_categories(name)")
+      .select(
+        "id, description, amount, currency, expense_date, category_id, expense_categories!category_id(name)",
+      )
       .eq("business_id", businessId)
       .gte("expense_date", periodStart.slice(0, 10))
       .order("expense_date", { ascending: false }),
