@@ -129,7 +129,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <div className="grid-main">
+      <div className="grid-main" data-single={!overview.tracksInventory}>
         <section className="card card-pad">
           <div className="section-heading">
             <div>
@@ -141,27 +141,35 @@ export default async function DashboardPage() {
           <DashboardChart data={overview.monthly} />
         </section>
 
-        <section className="card card-pad">
-          <div className="section-heading">
-            <div>
-              <h2>Low stock</h2>
-              <p>At or below the level you set</p>
-            </div>
-            <Link href="/inventory" className="badge badge-warning">Restock</Link>
-          </div>
-          <div className="list">
-            {overview.lowStock.length === 0 && <p className="empty-copy">Nothing needs restocking right now.</p>}
-            {overview.lowStock.slice(0, 4).map((item) => (
-              <div className="list-row" key={item.id}>
-                <span className="list-icon action-warning"><AlertTriangle size={18} /></span>
-                <div className="list-body">
-                  <p className="list-title">{item.name}</p>
-                  <p className="list-meta">{item.stock} {item.unit} left · restock level {item.threshold}</p>
-                </div>
+        {overview.tracksInventory && (
+          <section className="card card-pad">
+            <div className="section-heading">
+              <div>
+                <h2>Low stock</h2>
+                <p>At or below the level you set</p>
               </div>
-            ))}
-          </div>
-        </section>
+              <Link href="/inventory" className="badge badge-warning">Restock</Link>
+            </div>
+            <div className="list">
+              {overview.lowStock.length === 0 && (
+                <p className="empty-copy">Nothing needs restocking right now.</p>
+              )}
+              {overview.lowStock.slice(0, 4).map((item) => (
+                <div className="list-row" key={item.id}>
+                  <span className="list-icon action-warning">
+                    <AlertTriangle size={18} />
+                  </span>
+                  <div className="list-body">
+                    <p className="list-title">{item.name}</p>
+                    <p className="list-meta">
+                      {item.stock} {item.unit} left · restock level {item.threshold}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       <section className="card card-pad" style={{ marginTop: 16 }}>

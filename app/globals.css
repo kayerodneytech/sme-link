@@ -241,6 +241,10 @@ h2 {
   margin-top: 16px;
 }
 
+.grid-main[data-single="true"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .section-heading {
   align-items: flex-start;
   display: flex;
@@ -1158,6 +1162,10 @@ textarea.input {
 
   .grid-main {
     grid-template-columns: minmax(0, 1.7fr) minmax(310px, 0.8fr);
+  }
+
+  .grid-main[data-single="true"] {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .mobile-records {
