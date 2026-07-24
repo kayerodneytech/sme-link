@@ -258,6 +258,7 @@ export function InventoryView() {
         { id: crypto.randomUUID(), name },
       ]);
       setGroupName("");
+      setSelectedCategory(name);
       setMessage(`Added “${name}”.`);
       return;
     }
