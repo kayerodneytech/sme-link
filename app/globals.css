@@ -864,6 +864,19 @@ textarea.input {
   color: var(--teal);
 }
 
+.field-error {
+  color: var(--red);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  margin: 6px 0 0;
+}
+
+.input[aria-invalid="true"],
+.select[aria-invalid="true"] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 16%, transparent);
+}
+
 .auth-mode-switch {
   margin-bottom: 8px;
   width: 100%;
