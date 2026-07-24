@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, ChevronDown, Monitor, Settings, Store } from "lucide-react";
+import { BarChart3, ChevronDown, Monitor, Store } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -34,7 +34,6 @@ export function BusinessMenu({ mode = "business", posEnabled }: { mode?: "busine
           {posEnabled && (
             <Link aria-current={mode === "pos" ? "page" : undefined} data-active={mode === "pos"} href="/pos"><Monitor size={17} /><span><strong>POS View</strong><small>Fast walk-in checkout</small></span></Link>
           )}
-          {mode === "business" && <Link href="/settings"><Settings size={17} /><span><strong>Business settings</strong><small>Details and preferences</small></span></Link>}
         </div>
       )}
     </div>
