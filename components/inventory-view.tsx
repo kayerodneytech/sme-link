@@ -22,6 +22,7 @@ import {
   buildDownloadFilename,
   getBusinessNameForDownloads,
 } from "@/lib/download-filename";
+import { logAppError } from "@/lib/log-app-error";
 
 type InventoryItem = {
   id: string;
@@ -95,34 +96,86 @@ export function InventoryView() {
   useEffect(() => {
     if (!hasSupabaseConfig()) return;
     let active = true;
-    const supabase = createClient();
 
-    Promise.all([
-      supabase
-        .from("product_stock")
-        .select(
-          "id, name, sku, barcode, category, product_type, unit, pack_size, size_value, size_unit, cost_price, selling_price, reorder_level, quantity_on_hand",
-        )
-        .eq("is_archived", false)
-        .order("name"),
-      supabase
-        .from("product_categories")
-        .select("id, name")
-        .order("name"),
-      getCurrentBusinessId().then(async (businessId) => {
-        const { data } = await supabase
+    void (async () => {
+      const supabase = createClient();
+      let businessId: string;
+      try {
+        businessId = await getCurrentBusinessId();
+      } catch (error) {
+        if (!active) return;
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not load your business workspace.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      const [productResult, groupResult, businessResult] = await Promise.all([
+        supabase
+          .from("product_stock")
+          .select(
+            "id, name, sku, barcode, category, product_type, unit, pack_size, size_value, size_unit, cost_price, selling_price, reorder_level, quantity_on_hand",
+          )
+          .eq("business_id", businessId)
+          .eq("is_archived", false)
+          .order("name"),
+        supabase
+          .from("product_categories")
+          .select("id, name")
+          .eq("business_id", businessId)
+          .order("name"),
+        supabase
           .from("businesses")
           .select("currency, currencies")
           .eq("id", businessId)
-          .maybeSingle();
-        return data;
-      }),
-    ]).then(([productResult, groupResult, business]) => {
+          .maybeSingle(),
+      ]);
+
       if (!active) return;
-      if (productResult.data) {
+
+      let products = productResult.data;
+      if (productResult.error || !products) {
+        // Fallback if product_stock view is broken / not migrated.
+        const { data: fallback, error: fallbackError } = await supabase
+          .from("products")
+          .select(
+            "id, name, sku, barcode, category, product_type, unit, pack_size, size_value, size_unit, cost_price, selling_price, reorder_level",
+          )
+          .eq("business_id", businessId)
+          .eq("is_archived", false)
+          .order("name");
+        if (fallbackError) {
+          void logAppError({
+            source: "inventory.product_stock",
+            message: productResult.error?.message ?? fallbackError.message,
+            details: {
+              code: productResult.error?.code ?? fallbackError.code ?? null,
+              fallback: fallbackError.message,
+            },
+          });
+          setMessage(
+            `Inventory could not load products: ${productResult.error?.message ?? fallbackError.message}. Run supabase/migrations/0015_fix_product_stock_view.sql in Supabase.`,
+          );
+        } else {
+          products = (fallback ?? []).map((product) => ({
+            ...product,
+            quantity_on_hand: 0,
+          }));
+          if (productResult.error) {
+            setMessage(
+              `Stock levels may be incomplete. Run supabase/migrations/0015_fix_product_stock_view.sql in Supabase. (${productResult.error.message})`,
+            );
+          }
+        }
+      }
+
+      if (products) {
         setItems(
-          productResult.data.map((product) => {
-            const stock = Number(product.quantity_on_hand);
+          products.map((product) => {
+            const stock = Number(product.quantity_on_hand ?? 0);
             const threshold = Number(product.reorder_level);
             return {
               id: product.id,
@@ -133,7 +186,8 @@ export function InventoryView() {
               productType: product.product_type,
               unit: product.unit,
               packSize: Number(product.pack_size),
-              sizeValue: product.size_value == null ? null : Number(product.size_value),
+              sizeValue:
+                product.size_value == null ? null : Number(product.size_value),
               sizeUnit: product.size_unit ?? null,
               cost: Number(product.cost_price),
               price: Number(product.selling_price),
@@ -144,12 +198,20 @@ export function InventoryView() {
           }),
         );
       }
+
       if (groupResult.data) setGroups(groupResult.data);
       if (groupResult.error) {
+        void logAppError({
+          source: "inventory.product_categories",
+          message: groupResult.error.message,
+          details: { code: groupResult.error.code ?? null },
+        });
         setMessage(
-          "Product groups need the latest database update. Run migration 0005 in Supabase.",
+          "Product groups need the latest database update. Run migration 0005 (and 0015 if stock fails) in Supabase.",
         );
       }
+
+      const business = businessResult.data;
       if (business) {
         const list =
           business.currencies?.length > 0
@@ -159,7 +221,7 @@ export function InventoryView() {
         setStockCurrency(business.currency ?? list[0] ?? "USD");
       }
       setLoading(false);
-    });
+    })();
 
     return () => {
       active = false;
