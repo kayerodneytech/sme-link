@@ -235,7 +235,19 @@ export function AuthForm() {
       const result = await supabase.auth.signInWithPassword(signIn);
       setLoading(false);
       if (result.error) {
-        setMessage({ type: "error", text: result.error.message });
+        const raw = result.error.message.toLowerCase();
+        let text = result.error.message;
+        if (raw.includes("email not confirmed") || raw.includes("not confirmed")) {
+          text =
+            "This email is not confirmed yet. In Supabase → Authentication → Providers → Email, turn off “Confirm email”, then try again. Or confirm via the email link.";
+        } else if (
+          raw.includes("invalid login") ||
+          raw.includes("invalid credentials")
+        ) {
+          text =
+            "Email or password is wrong. If you just registered, wait a moment and try again — or use Forgot password if you have it.";
+        }
+        setMessage({ type: "error", text });
         return;
       }
       window.location.assign("/dashboard");
@@ -258,14 +270,14 @@ export function AuthForm() {
           business_sales_mode: registration.salesMode,
           business_needs: registration.needs,
           business_tracks_inventory: registration.tracksInventory,
-          business_opening_cash: Number(registration.openingCash),
+          business_opening_cash: Number(registration.openingCash || "0"),
           business_cash_openings: Object.fromEntries(
             registration.currencies.map((currency) => [
               currency,
               Number(
                 registration.cashOpenings[currency] ||
                   (currency === registration.currency
-                    ? registration.openingCash
+                    ? registration.openingCash || "0"
                     : "0"),
               ),
             ]),
@@ -276,7 +288,13 @@ export function AuthForm() {
 
     if (result.error) {
       setLoading(false);
-      setMessage({ type: "error", text: result.error.message });
+      const raw = result.error.message.toLowerCase();
+      let text = result.error.message;
+      if (raw.includes("already") || raw.includes("registered")) {
+        text =
+          "An account with this email already exists. Switch to Sign in, or delete the old auth user in Supabase if this was a test account.";
+      }
+      setMessage({ type: "error", text });
       return;
     }
 
@@ -284,22 +302,44 @@ export function AuthForm() {
       setLoading(false);
       setMessage({
         type: "error",
-        text: "Email confirmation is still enabled in Supabase. Turn off Confirm email in Authentication settings, then try again.",
+        text: "Account was created, but you are not signed in yet. In Supabase → Authentication → Providers → Email, turn OFF “Confirm email”, then sign in with the same email and password.",
       });
       return;
     }
 
-    // Signup can succeed even if the DB trigger did not create a business
-    // (e.g. older handle_new_user). Ensure a workspace exists before setup.
-    const { data: membership } = await supabase
-      .from("business_members")
-      .select("business_id")
-      .eq("user_id", result.data.user!.id)
-      .eq("status", "active")
-      .limit(1)
-      .maybeSingle();
+    // Persist the signup session before any authenticated API calls.
+    // Without this, create_business sees auth.uid() as null ("Authentication required").
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: result.data.session.access_token,
+      refresh_token: result.data.session.refresh_token,
+    });
+    if (sessionError) {
+      setLoading(false);
+      setMessage({
+        type: "error",
+        text: `Account created, but sign-in could not be completed: ${sessionError.message}. Try Sign in with the same email and password.`,
+      });
+      return;
+    }
 
-    if (!membership) {
+    // handle_new_user may create the business; give it a moment, then fall back to RPC.
+    let membershipId: string | null = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const { data: membership } = await supabase
+        .from("business_members")
+        .select("business_id")
+        .eq("user_id", result.data.user!.id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      if (membership?.business_id) {
+        membershipId = membership.business_id;
+        break;
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 250 * (attempt + 1)));
+    }
+
+    if (!membershipId) {
       const openings = Object.fromEntries(
         registration.currencies.map((currency) => [
           currency,
@@ -329,7 +369,7 @@ export function AuthForm() {
         setLoading(false);
         setMessage({
           type: "error",
-          text: `Account created, but the business workspace could not be set up: ${businessError.message}`,
+          text: `Account created, but the business workspace could not be set up: ${businessError.message}. Try Sign in — if that fails, turn off Confirm email in Supabase Auth settings.`,
         });
         return;
       }
