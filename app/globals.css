@@ -622,6 +622,10 @@ textarea.input {
   z-index: 80;
 }
 
+.dialog-backdrop-nested {
+  z-index: 90;
+}
+
 .dialog {
   background: white;
   border-radius: 18px 18px 0 0;

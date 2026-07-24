@@ -65,6 +65,7 @@ export function InventoryView() {
   const [loading, setLoading] = useState(hasSupabaseConfig());
   const [message, setMessage] = useState("");
   const [groupName, setGroupName] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [piecesInPack, setPiecesInPack] = useState("1");
   const [paidForPack, setPaidForPack] = useState("");
   const [sellEachFor, setSellEachFor] = useState("");
@@ -270,6 +271,7 @@ export function InventoryView() {
       if (error) throw error;
       await refreshGroups(businessId);
       setGroupName("");
+      setSelectedCategory(name);
       setMessage(`Added “${name}”.`);
     } catch (error) {
       const text =
@@ -335,7 +337,8 @@ export function InventoryView() {
     const paid = Number(paidForPack);
     const price = Number(sellEachFor);
     const threshold = Number(form.get("threshold") ?? 0);
-    const openingStock = Number(form.get("openingStock") ?? 0);
+    // Pack size is what you bought — that becomes starting stock.
+    const openingStock = productType === "stocked" ? packSize : 0;
     const cost = unitCostFromPack(packSize, paid);
     const sizeValue = sizeValueRaw === "" ? null : Number(sizeValueRaw);
 
@@ -365,10 +368,6 @@ export function InventoryView() {
     }
     if (!Number.isInteger(threshold) || threshold < 0) {
       setMessage("Enter a whole number for the low-stock warning.");
-      return;
-    }
-    if (!Number.isInteger(openingStock) || openingStock < 0) {
-      setMessage("Enter a whole number for how many pieces you have now.");
       return;
     }
     if (productType === "stocked" && openingStock > 0 && deductOpeningFromCash && paid <= 0) {
@@ -461,6 +460,7 @@ export function InventoryView() {
   }
 
   function resetProductForm() {
+    setSelectedCategory("");
     setPiecesInPack("1");
     setPaidForPack("");
     setSellEachFor("");
@@ -814,76 +814,6 @@ export function InventoryView() {
         </div>
       </section>
 
-      {showGroups && (
-        <div className="dialog-backdrop">
-          <div className="dialog">
-            <div className="dialog-header">
-              <div>
-                <p className="eyebrow">Stock</p>
-                <h2>Product groups</h2>
-                <p className="page-copy">
-                  Simple shelves for your products, like Drinks, Food or Home items.
-                </p>
-              </div>
-              <button
-                aria-label="Close"
-                className="icon-button"
-                onClick={() => setShowGroups(false)}
-                type="button"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <form className="form-grid" onSubmit={addGroup}>
-              <div className="field" style={{ gridColumn: "1 / -1" }}>
-                <label htmlFor="group-name">New group name</label>
-                <div className="inline-add">
-                  <input
-                    className="input"
-                    id="group-name"
-                    onChange={(event) => setGroupName(event.target.value)}
-                    placeholder="e.g. Drinks"
-                    value={groupName}
-                  />
-                  <button className="button button-primary" type="submit">
-                    <Plus size={16} /> Add
-                  </button>
-                </div>
-              </div>
-            </form>
-            <div className="group-list">
-              {groups.map((group) => (
-                <div className="group-row" key={group.id}>
-                  <strong>{group.name}</strong>
-                  <button
-                    aria-label={`Remove ${group.name}`}
-                    className="icon-button"
-                    onClick={() => void removeGroup(group)}
-                    type="button"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              {!groups.length && (
-                <p className="page-copy">
-                  No groups yet. Add Drinks, Food, Home items, or whatever fits your shop.
-                </p>
-              )}
-            </div>
-            <div className="dialog-actions">
-              <button
-                className="button button-secondary"
-                onClick={() => setShowGroups(false)}
-                type="button"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showForm && (
         <div className="dialog-backdrop" role="presentation">
           <form className="dialog" onSubmit={addMovement}>
@@ -1129,7 +1059,9 @@ export function InventoryView() {
                   className="select"
                   id="product-category"
                   name="category"
+                  onChange={(event) => setSelectedCategory(event.target.value)}
                   required
+                  value={selectedCategory}
                 >
                   <option value="">Choose a group</option>
                   {groups.map((group) => (
@@ -1142,10 +1074,7 @@ export function InventoryView() {
                   No group yet?{" "}
                   <button
                     className="text-button"
-                    onClick={() => {
-                      setShowProductForm(false);
-                      setShowGroups(true);
-                    }}
+                    onClick={() => setShowGroups(true)}
                     type="button"
                   >
                     Add product groups
@@ -1166,7 +1095,7 @@ export function InventoryView() {
               <div className="form-grid">
                 <div className="field">
                   <label htmlFor="product-pack-size">
-                    How many pieces in the pack you buy?
+                    How many pieces are you buying?
                   </label>
                   <input
                     className="input"
@@ -1181,6 +1110,9 @@ export function InventoryView() {
                     type="number"
                     value={piecesInPack}
                   />
+                  <p className="field-hint">
+                    This becomes your starting stock.
+                  </p>
                 </div>
                 <div className="field">
                   <label htmlFor="product-pack-paid">
@@ -1200,7 +1132,7 @@ export function InventoryView() {
                   <p className="field-hint">
                     Used to work out cost per piece
                     {deductOpeningFromCash
-                      ? ". Starting stock will also come out of cash if the box below is on."
+                      ? ". That cost will also come out of cash if the box below is on."
                       : ". Leave “deduct from cash” off if you already owned this stock."}
                   </p>
                 </div>
@@ -1277,21 +1209,6 @@ export function InventoryView() {
                     type="number"
                   />
                 </div>
-                <div className="field">
-                  <label htmlFor="product-opening-stock">
-                    How many pieces do you have now?
-                  </label>
-                  <input
-                    className="input"
-                    defaultValue="0"
-                    id="product-opening-stock"
-                    inputMode="numeric"
-                    min="0"
-                    name="openingStock"
-                    step="1"
-                    type="number"
-                  />
-                </div>
               </div>
               {pieceProfit !== null && Number.isFinite(pieceProfit) && (
                 <p className="pricing-result">
@@ -1316,6 +1233,82 @@ export function InventoryView() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showGroups && (
+        <div
+          className={
+            showProductForm
+              ? "dialog-backdrop dialog-backdrop-nested"
+              : "dialog-backdrop"
+          }
+        >
+          <div className="dialog">
+            <div className="dialog-header">
+              <div>
+                <p className="eyebrow">Stock</p>
+                <h2>Product groups</h2>
+                <p className="page-copy">
+                  Simple shelves for your products, like Drinks, Food or Home items.
+                </p>
+              </div>
+              <button
+                aria-label="Close"
+                className="icon-button"
+                onClick={() => setShowGroups(false)}
+                type="button"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form className="form-grid" onSubmit={addGroup}>
+              <div className="field" style={{ gridColumn: "1 / -1" }}>
+                <label htmlFor="group-name">New group name</label>
+                <div className="inline-add">
+                  <input
+                    className="input"
+                    id="group-name"
+                    onChange={(event) => setGroupName(event.target.value)}
+                    placeholder="e.g. Drinks"
+                    value={groupName}
+                  />
+                  <button className="button button-primary" type="submit">
+                    <Plus size={16} /> Add
+                  </button>
+                </div>
+              </div>
+            </form>
+            <div className="group-list">
+              {groups.map((group) => (
+                <div className="group-row" key={group.id}>
+                  <strong>{group.name}</strong>
+                  <button
+                    aria-label={`Remove ${group.name}`}
+                    className="icon-button"
+                    onClick={() => void removeGroup(group)}
+                    type="button"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              {!groups.length && (
+                <p className="page-copy">
+                  No groups yet. Add Drinks, Food, Home items, or whatever fits your shop.
+                </p>
+              )}
+            </div>
+            <div className="dialog-actions">
+              <button
+                className="button button-secondary"
+                onClick={() => setShowGroups(false)}
+                type="button"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>
