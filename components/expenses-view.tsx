@@ -9,6 +9,7 @@ import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RecordToolbar } from "./record-toolbar";
 import { DataLoadingState } from "./data-loading-state";
+import { ExcelExportButton } from "./excel-export-button";
 
 type ExpenseRow = {
   id: string;
@@ -212,7 +213,21 @@ export function ExpensesView() {
         onChange={setQuery}
         placeholder="Search expense or category"
         value={query}
-      />
+      >
+        <ExcelExportButton
+          filename="smelink-expenses.xlsx"
+          headers={["Description", "Date", "Category", "Payment", "Currency", "Amount"]}
+          rows={filtered.map((expense) => [
+            expense.description,
+            expense.date,
+            expense.category,
+            expense.method,
+            expense.currency,
+            expense.amount,
+          ])}
+          sheetName="Expenses"
+        />
+      </RecordToolbar>
       {message && (
         <p className="form-message form-message-success" style={{ marginBottom: 14 }}>
           {message}

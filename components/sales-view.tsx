@@ -5,6 +5,7 @@ import { sales } from "@/lib/sample-data";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useMemo, useState } from "react";
+import { ExcelExportButton } from "./excel-export-button";
 import { RecordToolbar } from "./record-toolbar";
 import { DataLoadingState } from "./data-loading-state";
 
@@ -54,7 +55,22 @@ export function SalesView() {
         <article className="card stat-tile"><p>Average sale</p><strong>{formatMoney(items.length ? revenue / items.length : 0)}</strong></article>
         <article className="card stat-tile"><p>Latest sale</p><strong className="metric-positive">{formatMoney(items[0]?.total ?? 0)}</strong></article>
       </section>
-      <RecordToolbar onChange={setQuery} placeholder="Search sale or customer" value={query} />
+      <RecordToolbar onChange={setQuery} placeholder="Search sale or customer" value={query}>
+        <ExcelExportButton
+          filename="smelink-sales.xlsx"
+          headers={["Sale", "Date", "Customer", "Items", "Payment", "Total", "Status"]}
+          rows={filtered.map((sale) => [
+            sale.id,
+            sale.date,
+            sale.customer,
+            sale.items,
+            sale.method,
+            sale.total,
+            sale.status,
+          ])}
+          sheetName="Sales"
+        />
+      </RecordToolbar>
       <section className="card">
         <div className="table-wrap desktop-only">
           <table className="data-table">

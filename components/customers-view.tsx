@@ -9,6 +9,7 @@ import { Building2, Mail, Phone, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { RecordToolbar } from "./record-toolbar";
 import { DataLoadingState } from "./data-loading-state";
+import { ExcelExportButton } from "./excel-export-button";
 
 type CustomerRow = {
   id: string;
@@ -208,7 +209,30 @@ export function CustomersView() {
         onChange={setQuery}
         placeholder="Search name, company, phone or email"
         value={query}
-      />
+      >
+        <ExcelExportButton
+          filename="smelink-customers.xlsx"
+          headers={[
+            "Contact name",
+            "Company",
+            "Phone",
+            "Email",
+            "City",
+            "Jobs",
+            "Lifetime spent",
+          ]}
+          rows={filtered.map((customer) => [
+            customer.name,
+            customer.company,
+            customer.phone,
+            customer.email,
+            customer.city,
+            customer.orders,
+            customer.spent,
+          ])}
+          sheetName="Customers"
+        />
+      </RecordToolbar>
       {message && (
         <p
           className={`form-message ${

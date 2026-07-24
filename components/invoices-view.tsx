@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DataLoadingState } from "./data-loading-state";
+import { ExcelExportButton } from "./excel-export-button";
 import { RecordToolbar } from "./record-toolbar";
 
 type InvoiceRow = {
@@ -196,7 +197,30 @@ export function InvoicesView() {
         onChange={setQuery}
         placeholder="Search invoice or customer"
         value={query}
-      />
+      >
+        <ExcelExportButton
+          filename="smelink-invoices.xlsx"
+          headers={[
+            "Invoice",
+            "Issued",
+            "Due",
+            "Customer",
+            "Currency",
+            "Total",
+            "Status",
+          ]}
+          rows={filtered.map((invoice) => [
+            invoice.number,
+            invoice.date,
+            invoice.dueDate,
+            invoice.customer,
+            invoice.currency,
+            invoice.total,
+            invoice.status,
+          ])}
+          sheetName="Invoices"
+        />
+      </RecordToolbar>
       {message && (
         <p
           className={`form-message ${

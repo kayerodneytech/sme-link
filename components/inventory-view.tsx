@@ -12,10 +12,12 @@ import { formatMoney } from "@/lib/format";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentBusinessId } from "@/lib/supabase/workspace";
-import { FolderPlus, PackagePlus, Plus, Trash2, X } from "lucide-react";
+import { FolderPlus, FileSpreadsheet, PackagePlus, Plus, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DataLoadingState } from "./data-loading-state";
+import { ProductImportDialog } from "./product-import-dialog";
 import { RecordToolbar } from "./record-toolbar";
+import { downloadExcel } from "@/lib/excel";
 
 type InventoryItem = {
   id: string;
@@ -48,6 +50,7 @@ export function InventoryView() {
   const [showForm, setShowForm] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
   const [showGroups, setShowGroups] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [items, setItems] = useState<InventoryItem[]>(() =>
     hasSupabaseConfig() ? [] : initialProducts,
   );
@@ -543,6 +546,52 @@ export function InventoryView() {
       >
         <button
           className="button button-secondary"
+          onClick={() => setShowImport(true)}
+          type="button"
+        >
+          <Upload size={16} /> Import Excel
+        </button>
+        <button
+          className="button button-secondary"
+          onClick={() => {
+            downloadExcel("smelink-products.xlsx", [
+              {
+                name: "Products",
+                rows: [
+                  [
+                    "name",
+                    "group",
+                    "sku",
+                    "barcode",
+                    "size_value",
+                    "size_unit",
+                    "cost_each",
+                    "sell_each",
+                    "stock_now",
+                    "low_stock_at",
+                  ],
+                  ...items.map((product) => [
+                    product.name,
+                    product.category,
+                    product.sku === "—" ? "" : product.sku,
+                    product.barcode,
+                    product.sizeValue,
+                    product.sizeUnit,
+                    product.cost,
+                    product.price,
+                    product.stock,
+                    product.threshold,
+                  ]),
+                ],
+              },
+            ]);
+          }}
+          type="button"
+        >
+          <FileSpreadsheet size={16} /> Export Excel
+        </button>
+        <button
+          className="button button-secondary"
           onClick={() => setShowGroups(true)}
           type="button"
         >
@@ -567,11 +616,28 @@ export function InventoryView() {
         </button>
       </RecordToolbar>
       {message && (
-        <p className="form-message form-message-success" style={{ marginBottom: 14 }}>
+        <p
+          className={`form-message ${
+            message.toLowerCase().includes("issue") ||
+            message.toLowerCase().includes("could not") ||
+            message.toLowerCase().includes("failed")
+              ? "form-message-error"
+              : "form-message-success"
+          }`}
+          style={{ marginBottom: 14 }}
+        >
           {message}
         </p>
       )}
 
+      <ProductImportDialog
+        onClose={() => setShowImport(false)}
+        onImported={(summary) => {
+          setMessage(summary);
+          window.setTimeout(() => window.location.reload(), 700);
+        }}
+        open={showImport}
+      />
       <section className="card">
         <div className="table-wrap desktop-only">
           <table className="data-table">
