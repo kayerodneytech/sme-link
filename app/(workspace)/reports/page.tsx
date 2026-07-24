@@ -170,10 +170,10 @@ export default async function ReportsPage() {
             </span>
             <ArrowRight size={18} />
           </Link>
-          <Link href="/orders">
+          <Link href="/customers">
             <span>
-              <strong>Follow up on open orders</strong>
-              <small>Turn confirmed customer requests into sales.</small>
+              <strong>Review customers</strong>
+              <small>Keep contact details ready for follow-up and invoices.</small>
             </span>
             <ArrowRight size={18} />
           </Link>

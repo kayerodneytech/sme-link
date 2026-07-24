@@ -32,7 +32,6 @@ type Business = {
 const needs = [
   ["sales", "Record sales"],
   ["inventory", "Manage stock"],
-  ["orders", "Follow orders"],
   ["expenses", "Track expenses"],
   ["customers", "Keep customers"],
   ["reports", "Understand performance"],
@@ -244,7 +243,7 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
         currencies: ensuredCurrencies,
         team_size: String(form.get("teamSize") ?? "just_me"),
         sales_mode: String(form.get("salesMode") ?? "walk_in"),
-        primary_needs: selectedNeeds,
+        primary_needs: selectedNeeds.filter((need) => need !== "orders"),
         tracks_inventory: form.get("tracksInventory") === "on",
       };
 
@@ -386,13 +385,16 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
             <label htmlFor="sales-mode">How customers buy</label>
             <select
               className="select"
-              defaultValue={business?.sales_mode ?? "walk_in"}
+              defaultValue={
+                business?.sales_mode === "orders" || business?.sales_mode === "both"
+                  ? "both"
+                  : business?.sales_mode ?? "walk_in"
+              }
               id="sales-mode"
               name="salesMode"
             >
               <option value="walk_in">Mostly walk-in sales</option>
-              <option value="orders">Mostly customer orders</option>
-              <option value="both">Walk-ins and orders</option>
+              <option value="both">Walk-ins and regular customers</option>
             </select>
           </div>
         </div>

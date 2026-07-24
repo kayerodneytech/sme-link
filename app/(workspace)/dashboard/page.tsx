@@ -7,7 +7,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   Boxes,
-  ClipboardList,
   PackageCheck,
   Plus,
   ReceiptText,
@@ -116,11 +115,13 @@ export default async function DashboardPage() {
               <ArrowRight size={18} />
             </Link>
           )}
-          <Link href="/orders">
-            <span className="list-icon"><ClipboardList size={18} /></span>
-            <span><strong>Follow up on {overview.openOrders} open {overview.openOrders === 1 ? "order" : "orders"}</strong><small>Confirm payment, collection or delivery.</small></span>
-            <ArrowRight size={18} />
-          </Link>
+          {!overview.tracksInventory && (
+            <Link href="/sales">
+              <span className="list-icon"><ShoppingBag size={18} /></span>
+              <span><strong>Review recent sales and invoices</strong><small>Follow unpaid invoices and mark them paid when money comes in.</small></span>
+              <ArrowRight size={18} />
+            </Link>
+          )}
           <Link href="/expenses">
             <span className="list-icon"><ReceiptText size={18} /></span>
             <span><strong>Review where money went</strong><small>{topExpense ? `${topExpense.name} is the largest expense category.` : "Start recording expenses to see spending patterns."}</small></span>

@@ -39,8 +39,10 @@ export default async function WorkspaceLayout({
     : membership.businesses;
 
   const tracksInventory = Boolean(business?.tracks_inventory);
-  const needs = ((business?.primary_needs ?? []) as string[]).filter((need) =>
-    tracksInventory ? need !== "services" : need !== "inventory",
+  const needs = ((business?.primary_needs ?? []) as string[]).filter(
+    (need) =>
+      need !== "orders" &&
+      (tracksInventory ? need !== "services" : need !== "inventory"),
   );
 
   return (
@@ -51,7 +53,7 @@ export default async function WorkspaceLayout({
         ...needs,
         ...(tracksInventory ? ["inventory"] : ["services"]),
         ...(["orders", "both"].includes(business?.sales_mode ?? "")
-          ? ["orders", "customers"]
+          ? ["customers"]
           : []),
         ...(!tracksInventory ? ["customers"] : []),
       ]}

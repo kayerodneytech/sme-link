@@ -29,7 +29,7 @@ async function getSetupProgress(): Promise<SetupData> {
   if (!hasSupabaseConfig()) {
     return {
       progress: { products: false, customers: false, sales: false, expenses: false },
-      needs: ["sales", "inventory", "orders", "customers", "expenses", "reports"],
+      needs: ["sales", "inventory", "customers", "expenses", "reports"],
       tracksInventory: true,
       salesMode: "both",
     };
@@ -89,7 +89,7 @@ const steps = [
   {
     key: "customers" as const,
     title: "Save a regular customer",
-    copy: "This is optional for walk-in sales, but useful for orders and repeat customers.",
+    copy: "This is optional for walk-in sales, but useful for repeat customers and invoices.",
     action: "Add customer",
     href: "/customers",
     icon: Users,
@@ -120,8 +120,9 @@ export default async function SetupPage() {
       if (step.key === "sales") return setup.needs.includes("sales");
       if (step.key === "customers") {
         return (
-          setup.needs.some((need) => ["customers", "orders"].includes(need)) ||
-          ["orders", "both"].includes(setup.salesMode)
+          setup.needs.includes("customers") ||
+          ["orders", "both"].includes(setup.salesMode) ||
+          !setup.tracksInventory
         );
       }
       return setup.needs.some((need) => ["expenses", "reports"].includes(need));

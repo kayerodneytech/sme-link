@@ -9,7 +9,6 @@ import {
   BarChart3,
   Boxes,
   Check,
-  ClipboardList,
   Eye,
   EyeOff,
   LoaderCircle,
@@ -60,7 +59,6 @@ const initialRegistration: Registration = {
 const needOptions = [
   { value: "sales", label: "Record sales", icon: ShoppingBag },
   { value: "inventory", label: "Manage stock", icon: Boxes },
-  { value: "orders", label: "Follow orders", icon: ClipboardList },
   { value: "expenses", label: "Track expenses", icon: ReceiptText },
   { value: "customers", label: "Keep customers", icon: Users },
   { value: "reports", label: "Understand performance", icon: BarChart3 },
@@ -73,17 +71,17 @@ const sectorDefaults: Record<string, Pick<Registration, "needs" | "tracksInvento
     salesMode: "walk_in",
   },
   wholesale: {
-    needs: ["sales", "inventory", "orders", "customers", "expenses", "reports"],
+    needs: ["sales", "inventory", "customers", "expenses", "reports"],
     tracksInventory: true,
-    salesMode: "orders",
+    salesMode: "both",
   },
   services: {
     needs: ["sales", "customers", "expenses", "reports"],
     tracksInventory: false,
-    salesMode: "orders",
+    salesMode: "both",
   },
   manufacturing: {
-    needs: ["sales", "inventory", "orders", "expenses", "reports"],
+    needs: ["sales", "inventory", "expenses", "reports"],
     tracksInventory: true,
     salesMode: "both",
   },
@@ -351,7 +349,7 @@ export function AuthForm() {
           </div>
           <div className="form-grid">
             <div className="field"><label htmlFor="team-size">How many people work here?</label><select className="select" id="team-size" onChange={(event) => update("teamSize", event.target.value)} value={registration.teamSize}><option value="just_me">Just me</option><option value="2_5">2–5 people</option><option value="6_20">6–20 people</option><option value="more_than_20">More than 20</option></select></div>
-            <div className="field"><label htmlFor="sales-mode">How do customers usually buy?</label><select className="select" id="sales-mode" onChange={(event) => update("salesMode", event.target.value)} value={registration.salesMode}><option value="walk_in">Mostly walk-in sales</option><option value="orders">Mostly customer orders</option><option value="both">Both walk-ins and orders</option></select></div>
+            <div className="field"><label htmlFor="sales-mode">How do customers usually buy?</label><select className="select" id="sales-mode" onChange={(event) => update("salesMode", event.target.value)} value={registration.salesMode === "orders" ? "both" : registration.salesMode}><option value="walk_in">Mostly walk-in sales</option><option value="both">Walk-ins and regular customers</option></select></div>
           </div>
           <div className="field">
             <label htmlFor="opening-cash">Starting money (cash in hand)</label>

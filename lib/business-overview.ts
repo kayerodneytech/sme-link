@@ -11,7 +11,6 @@ import {
   expenseBreakdown,
   expenses as mockExpenses,
   monthlyPerformance,
-  orders as mockOrders,
   products as mockProducts,
   sales as mockSales,
 } from "@/lib/sample-data";
@@ -114,9 +113,7 @@ function mockOverview(): BusinessOverview {
         threshold: product.threshold,
         unit: "items",
       })),
-    openOrders: mockOrders.filter((order) =>
-      ["Pending", "Confirmed"].includes(order.status),
-    ).length,
+    openOrders: 0,
     bestSeller: { name: "Maize meal 10kg", quantity: 126 },
     monthly: monthlyPerformance,
     expenseCategories: expenseBreakdown,
@@ -193,7 +190,6 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
     allSalesResult,
     allExpensesResult,
     stockResult,
-    ordersResult,
     itemsResult,
   ] = await Promise.all([
     supabase
@@ -235,11 +231,6 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
       .eq("business_id", businessId)
       .eq("is_archived", false),
     supabase
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("business_id", businessId)
-      .in("status", ["pending", "confirmed"]),
-    supabase
       .from("sale_items")
       .select(
         "quantity, unit_price, products!inner(name, business_id, cost_price), sales!inner(status, completed_at, currency)",
@@ -256,7 +247,6 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
     allSalesResult.error,
     allExpensesResult.error,
     stockResult.error,
-    ordersResult.error,
     itemsResult.error,
   ].find(Boolean);
   if (firstError) throw firstError;
@@ -411,7 +401,7 @@ export async function getBusinessOverview(): Promise<BusinessOverview> {
             unit: product.unit ?? "items",
           }))
       : [],
-    openOrders: ordersResult.count ?? 0,
+    openOrders: 0,
     bestSeller: bestSellerEntry
       ? { name: bestSellerEntry[0], quantity: bestSellerEntry[1] }
       : null,
