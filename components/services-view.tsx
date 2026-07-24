@@ -4,7 +4,7 @@ import { formatMoney } from "@/lib/format";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentBusinessId } from "@/lib/supabase/workspace";
-import { Briefcase, Plus, Trash2, X } from "lucide-react";
+import { Briefcase, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DataLoadingState } from "./data-loading-state";
 import { RecordToolbar } from "./record-toolbar";
@@ -24,6 +24,13 @@ type Service = {
   price: number;
   unit: string;
   tiers: Tier[];
+};
+
+type TierDraft = {
+  id?: string;
+  name: string;
+  description: string;
+  price: string;
 };
 
 const demoServices: Service[] = [
@@ -58,6 +65,10 @@ const UNIT_OPTIONS = [
   ["visit", "Per visit"],
 ];
 
+function uniqueServiceSku(prefix = "SVC") {
+  return `${prefix}-${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
+}
+
 export function ServicesView() {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<Service[]>(() =>
@@ -65,19 +76,19 @@ export function ServicesView() {
   );
   const [loading, setLoading] = useState(hasSupabaseConfig());
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [unit, setUnit] = useState("job");
   const [basePrice, setBasePrice] = useState("");
-  const [tiers, setTiers] = useState<
-    { name: string; description: string; price: string }[]
-  >([]);
+  const [tiers, setTiers] = useState<TierDraft[]>([]);
 
-  useEffect(() => {
+  function loadServices() {
     if (!hasSupabaseConfig()) return;
     const supabase = createClient();
-    supabase
+    return supabase
       .from("products")
       .select(
         "id, name, description, selling_price, unit, parent_product_id, product_type",
@@ -118,6 +129,10 @@ export function ServicesView() {
         );
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    void loadServices();
   }, []);
 
   const filtered = useMemo(
@@ -138,11 +153,34 @@ export function ServicesView() {
   }
 
   function resetForm() {
+    setEditingId(null);
     setName("");
     setDescription("");
     setUnit("job");
     setBasePrice("");
     setTiers([]);
+  }
+
+  function openCreate() {
+    resetForm();
+    setShowForm(true);
+  }
+
+  function openEdit(service: Service) {
+    setEditingId(service.id);
+    setName(service.name);
+    setDescription(service.description);
+    setUnit(service.unit);
+    setBasePrice(String(service.price));
+    setTiers(
+      service.tiers.map((tier) => ({
+        id: tier.id,
+        name: tier.name,
+        description: tier.description,
+        price: String(tier.price),
+      })),
+    );
+    setShowForm(true);
   }
 
   async function saveService(event: React.FormEvent<HTMLFormElement>) {
@@ -162,6 +200,7 @@ export function ServicesView() {
 
     const parsedTiers = tiers
       .map((tier) => ({
+        id: tier.id,
         name: tier.name.trim(),
         description: tier.description.trim(),
         price: Number(tier.price),
@@ -181,75 +220,173 @@ export function ServicesView() {
     }
 
     if (!hasSupabaseConfig()) {
-      setItems((current) => [
-        {
-          id: crypto.randomUUID(),
-          name: trimmedName,
-          description: description.trim(),
-          price: parsedBase,
-          unit,
-          tiers: parsedTiers.map((tier) => ({
+      if (editingId) {
+        setItems((current) =>
+          current.map((service) =>
+            service.id === editingId
+              ? {
+                  ...service,
+                  name: trimmedName,
+                  description: description.trim(),
+                  price: parsedBase,
+                  unit,
+                  tiers: parsedTiers.map((tier) => ({
+                    id: tier.id ?? crypto.randomUUID(),
+                    name: tier.name,
+                    description: tier.description,
+                    price: tier.price,
+                    unit,
+                  })),
+                }
+              : service,
+          ),
+        );
+        setMessage("Service updated in this demonstration session.");
+      } else {
+        setItems((current) => [
+          {
             id: crypto.randomUUID(),
-            name: tier.name,
-            description: tier.description,
-            price: tier.price,
+            name: trimmedName,
+            description: description.trim(),
+            price: parsedBase,
             unit,
-          })),
-        },
-        ...current,
-      ]);
+            tiers: parsedTiers.map((tier) => ({
+              id: crypto.randomUUID(),
+              name: tier.name,
+              description: tier.description,
+              price: tier.price,
+              unit,
+            })),
+          },
+          ...current,
+        ]);
+        setMessage("Service added to this demonstration session.");
+      }
       setShowForm(false);
       resetForm();
-      setMessage("Service added to this demonstration session.");
       return;
     }
 
+    setSaving(true);
     try {
       const businessId = await getCurrentBusinessId();
       const supabase = createClient();
-      const { data: service, error } = await supabase
-        .from("products")
-        .insert({
-          business_id: businessId,
-          name: trimmedName,
-          description: description.trim() || null,
-          product_type: "service",
-          unit,
-          selling_price: parsedBase,
-          cost_price: 0,
-          pack_size: 1,
-          reorder_level: 0,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
 
-      if (parsedTiers.length) {
-        const { error: tierError } = await supabase.from("products").insert(
-          parsedTiers.map((tier) => ({
+      if (editingId) {
+        const { error } = await supabase
+          .from("products")
+          .update({
+            name: trimmedName,
+            description: description.trim() || null,
+            unit,
+            selling_price: parsedBase,
+          })
+          .eq("id", editingId);
+        if (error) throw error;
+
+        const existingTier =
+          items.find((service) => service.id === editingId)?.tiers ?? [];
+        const keptIds = new Set(
+          parsedTiers.map((tier) => tier.id).filter(Boolean) as string[],
+        );
+
+        for (const tier of existingTier) {
+          if (!keptIds.has(tier.id)) {
+            const { error: archiveError } = await supabase
+              .from("products")
+              .update({ is_archived: true })
+              .eq("id", tier.id);
+            if (archiveError) throw archiveError;
+          }
+        }
+
+        for (const tier of parsedTiers) {
+          if (tier.id) {
+            const { error: tierError } = await supabase
+              .from("products")
+              .update({
+                name: tier.name,
+                description: tier.description || null,
+                unit,
+                selling_price: tier.price,
+              })
+              .eq("id", tier.id);
+            if (tierError) throw tierError;
+          } else {
+            const { error: tierError } = await supabase.from("products").insert({
+              business_id: businessId,
+              name: tier.name,
+              description: tier.description || null,
+              product_type: "service",
+              unit,
+              selling_price: tier.price,
+              cost_price: 0,
+              pack_size: 1,
+              reorder_level: 0,
+              parent_product_id: editingId,
+              sku: uniqueServiceSku("TIER"),
+            });
+            if (tierError) throw tierError;
+          }
+        }
+
+        setMessage("Service updated.");
+      } else {
+        const { data: service, error } = await supabase
+          .from("products")
+          .insert({
             business_id: businessId,
-            name: tier.name,
-            description: tier.description || null,
+            name: trimmedName,
+            description: description.trim() || null,
             product_type: "service",
             unit,
-            selling_price: tier.price,
+            selling_price: parsedBase,
             cost_price: 0,
             pack_size: 1,
             reorder_level: 0,
-            parent_product_id: service.id,
-          })),
-        );
-        if (tierError) throw tierError;
+            sku: uniqueServiceSku("SVC"),
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+
+        if (parsedTiers.length) {
+          const { error: tierError } = await supabase.from("products").insert(
+            parsedTiers.map((tier) => ({
+              business_id: businessId,
+              name: tier.name,
+              description: tier.description || null,
+              product_type: "service",
+              unit,
+              selling_price: tier.price,
+              cost_price: 0,
+              pack_size: 1,
+              reorder_level: 0,
+              parent_product_id: service.id,
+              sku: uniqueServiceSku("TIER"),
+            })),
+          );
+          if (tierError) throw tierError;
+        }
+        setMessage("Service added.");
       }
-      window.location.reload();
+
+      setShowForm(false);
+      resetForm();
+      setLoading(true);
+      await loadServices();
     } catch (error) {
       const detail =
         error instanceof Error ? error.message : "The service could not be saved.";
       setMessage(
-        /description|parent_product_id|schema cache/i.test(detail)
-          ? `${detail} Run supabase/migrations/0009_services_and_customers.sql in Supabase.`
-          : detail,
+        /products_business_id_sku|duplicate key/i.test(detail)
+          ? `${detail} Run supabase/migrations/0011_product_sku_nulls.sql in Supabase, then try again.`
+          : /description|parent_product_id|schema cache/i.test(detail)
+            ? `${detail} Run supabase/migrations/0009_services_and_customers.sql in Supabase.`
+            : detail,
       );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -265,7 +402,9 @@ export function ServicesView() {
       {message && (
         <p
           className={`form-message ${
-            message.includes("added") || message.includes("demonstration")
+            message.includes("added") ||
+            message.includes("updated") ||
+            message.includes("demonstration")
               ? "form-message-success"
               : "form-message-error"
           }`}
@@ -326,6 +465,14 @@ export function ServicesView() {
                 ))}
               </div>
             )}
+            <button
+              className="button button-secondary"
+              onClick={() => openEdit(service)}
+              style={{ marginTop: 14, width: "100%" }}
+              type="button"
+            >
+              <Pencil size={16} /> Edit service
+            </button>
           </article>
         ))}
         {!filtered.length && (
@@ -346,6 +493,7 @@ export function ServicesView() {
                 <th>Billing</th>
                 <th>Tiers</th>
                 <th>Price</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -373,6 +521,16 @@ export function ServicesView() {
                         )}`
                       : formatMoney(service.price)}
                   </td>
+                  <td>
+                    <button
+                      className="button button-secondary"
+                      onClick={() => openEdit(service)}
+                      style={{ minHeight: 36, padding: "0 10px" }}
+                      type="button"
+                    >
+                      <Pencil size={15} /> Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -382,7 +540,7 @@ export function ServicesView() {
 
       <button
         className="button button-primary"
-        onClick={() => setShowForm(true)}
+        onClick={openCreate}
         style={{
           bottom: 84,
           boxShadow: "0 8px 20px rgba(15,118,110,.25)",
@@ -400,7 +558,7 @@ export function ServicesView() {
             <div className="dialog-header">
               <div>
                 <p className="eyebrow">Offerings</p>
-                <h2>Add a service</h2>
+                <h2>{editingId ? "Edit service" : "Add a service"}</h2>
                 <p className="page-copy">
                   Name what you do, describe it, and optionally add price tiers
                   (Starter, Standard, Premium).
@@ -493,7 +651,7 @@ export function ServicesView() {
               </div>
               <div style={{ display: "grid", gap: 12 }}>
                 {tiers.map((tier, index) => (
-                  <div className="card record-card" key={index}>
+                  <div className="card record-card" key={tier.id ?? `new-${index}`}>
                     <div className="form-grid" style={{ alignItems: "end" }}>
                       <div className="field">
                         <label htmlFor={`tier-name-${index}`}>Tier name</label>
@@ -583,8 +741,17 @@ export function ServicesView() {
               >
                 Cancel
               </button>
-              <button className="button button-primary" type="submit">
-                <Plus size={17} /> Save service
+              <button
+                className="button button-primary"
+                disabled={saving}
+                type="submit"
+              >
+                <Plus size={17} />
+                {saving
+                  ? "Saving…"
+                  : editingId
+                    ? "Save changes"
+                    : "Save service"}
               </button>
             </div>
           </form>
