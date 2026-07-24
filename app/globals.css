@@ -1702,11 +1702,53 @@ kbd {
 }
 
 @media print {
-  body * { visibility: hidden !important; }
-  .receipt-backdrop, .receipt-backdrop * { visibility: visible !important; }
-  .receipt-backdrop { background: white; display: block; inset: 0; position: absolute; }
-  .receipt-dialog { border: 0; box-shadow: none; margin: 0 auto; width: 80mm; }
-  .no-print, .receipt-close { display: none !important; }
+  /* POS receipt: hide chrome and print only the receipt dialog. */
+  body:has(.receipt-backdrop) * {
+    visibility: hidden !important;
+  }
+  body:has(.receipt-backdrop) .receipt-backdrop,
+  body:has(.receipt-backdrop) .receipt-backdrop * {
+    visibility: visible !important;
+  }
+  body:has(.receipt-backdrop) .receipt-backdrop {
+    background: white;
+    display: block;
+    inset: 0;
+    position: absolute;
+  }
+  body:has(.receipt-backdrop) .receipt-dialog {
+    border: 0;
+    box-shadow: none;
+    margin: 0 auto;
+    width: 80mm;
+  }
+  .no-print,
+  .receipt-close {
+    display: none !important;
+  }
+
+  /* Service invoices: print the sheet, hide app chrome. */
+  body:has(.invoice-page) .no-print,
+  body:has(.invoice-page) .desktop-sidebar,
+  body:has(.invoice-page) .mobile-nav,
+  body:has(.invoice-page) .topbar {
+    display: none !important;
+  }
+
+  body:has(.invoice-page) .app-shell,
+  body:has(.invoice-page) .app-main,
+  body:has(.invoice-page) .content,
+  body:has(.invoice-page) .invoice-page {
+    display: block !important;
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  body:has(.invoice-page) .invoice-sheet {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
 }
 
 @keyframes menu-enter {
