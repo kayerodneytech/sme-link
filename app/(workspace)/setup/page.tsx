@@ -36,12 +36,25 @@ async function getSetupProgress(): Promise<SetupData> {
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      progress: { products: false, customers: false, sales: false, expenses: false },
+      needs: [],
+      tracksInventory: false,
+      salesMode: "walk_in",
+    };
+  }
+
   const { data: membership } = await supabase
     .from("business_members")
     .select("business_id, businesses(primary_needs, tracks_inventory, sales_mode)")
+    .eq("user_id", user.id)
     .eq("status", "active")
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (!membership) {
     return {

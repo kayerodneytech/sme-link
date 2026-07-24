@@ -289,8 +289,53 @@ export function AuthForm() {
       return;
     }
 
-    setLoading(false);
+    // Signup can succeed even if the DB trigger did not create a business
+    // (e.g. older handle_new_user). Ensure a workspace exists before setup.
+    const { data: membership } = await supabase
+      .from("business_members")
+      .select("business_id")
+      .eq("user_id", result.data.user!.id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
 
+    if (!membership) {
+      const openings = Object.fromEntries(
+        registration.currencies.map((currency) => [
+          currency,
+          Number(
+            registration.cashOpenings[currency] ||
+              (currency === registration.currency
+                ? registration.openingCash || "0"
+                : "0"),
+          ),
+        ]),
+      );
+      const { error: businessError } = await supabase.rpc("create_business", {
+        business_name: registration.businessName,
+        business_sector: registration.sector,
+        business_phone: registration.phone || null,
+        business_location: registration.location || null,
+        business_currency: registration.currency,
+        business_team_size: registration.teamSize,
+        business_sales_mode: registration.salesMode,
+        business_needs: registration.needs,
+        business_tracks_inventory: registration.tracksInventory,
+        business_currencies: registration.currencies,
+        business_opening_cash: Number(registration.openingCash || "0"),
+        business_cash_openings: openings,
+      });
+      if (businessError) {
+        setLoading(false);
+        setMessage({
+          type: "error",
+          text: `Account created, but the business workspace could not be set up: ${businessError.message}`,
+        });
+        return;
+      }
+    }
+
+    setLoading(false);
     window.location.assign("/setup");
   }
 
