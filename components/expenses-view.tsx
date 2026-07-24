@@ -459,7 +459,7 @@ export function ExpensesView() {
           <FolderTree size={16} /> Categories
         </button>
         <ExcelExportButton
-          filename="smelink-expenses.xlsx"
+          documentLabel="expenses"
           headers={["Description", "Date", "Category", "Payment", "Currency", "Amount"]}
           rows={filtered.map((expense) => [
             expense.description,

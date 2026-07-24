@@ -57,7 +57,7 @@ export function SalesView() {
       </section>
       <RecordToolbar onChange={setQuery} placeholder="Search sale or customer" value={query}>
         <ExcelExportButton
-          filename="smelink-sales.xlsx"
+          documentLabel="sales"
           headers={["Sale", "Date", "Customer", "Items", "Payment", "Total", "Status"]}
           rows={filtered.map((sale) => [
             sale.id,

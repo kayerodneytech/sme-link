@@ -211,7 +211,7 @@ export function CustomersView() {
         value={query}
       >
         <ExcelExportButton
-          filename="smelink-customers.xlsx"
+          documentLabel="customers"
           headers={[
             "Contact name",
             "Company",

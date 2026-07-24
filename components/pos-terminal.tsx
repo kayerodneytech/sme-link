@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Barcode,
   Check,
+  Download,
   LoaderCircle,
   Minus,
   Plus,
@@ -28,6 +29,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BusinessMenu } from "./business-menu";
 import { DataLoadingState } from "./data-loading-state";
+import { downloadReceiptPdf } from "@/lib/receipt-pdf";
 
 type Product = {
   id: string;
@@ -712,6 +714,33 @@ export function PosTerminal({
                 type="button"
               >
                 New sale
+              </button>
+              <button
+                className="button button-secondary"
+                onClick={() => {
+                  downloadReceiptPdf({
+                    businessName,
+                    receiptNumber: receipt.number,
+                    date: receipt.date,
+                    paymentMethod: receipt.paymentMethod,
+                    currency: receipt.currency,
+                    rateLabel: receipt.rateLabel,
+                    lines: receipt.lines.map((line) => ({
+                      label: line.label,
+                      quantity: line.quantity,
+                      lineTotal: line.chargedPrice * line.quantity,
+                    })),
+                    net: receipt.net,
+                    vat: receipt.vat,
+                    vatRate: receipt.vatRate,
+                    total: receipt.total,
+                    cashReceived: receipt.cashReceived,
+                    change: receipt.change,
+                  });
+                }}
+                type="button"
+              >
+                <Download size={17} /> Download PDF
               </button>
               <button
                 className="button button-primary"

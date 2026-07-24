@@ -18,6 +18,10 @@ import { DataLoadingState } from "./data-loading-state";
 import { ProductImportDialog } from "./product-import-dialog";
 import { RecordToolbar } from "./record-toolbar";
 import { downloadExcel } from "@/lib/excel";
+import {
+  buildDownloadFilename,
+  getBusinessNameForDownloads,
+} from "@/lib/download-filename";
 
 type InventoryItem = {
   id: string;
@@ -554,37 +558,43 @@ export function InventoryView() {
         <button
           className="button button-secondary"
           onClick={() => {
-            downloadExcel("smelink-products.xlsx", [
-              {
-                name: "Products",
-                rows: [
-                  [
-                    "name",
-                    "group",
-                    "sku",
-                    "barcode",
-                    "size_value",
-                    "size_unit",
-                    "cost_each",
-                    "sell_each",
-                    "stock_now",
-                    "low_stock_at",
-                  ],
-                  ...items.map((product) => [
-                    product.name,
-                    product.category,
-                    product.sku === "—" ? "" : product.sku,
-                    product.barcode,
-                    product.sizeValue,
-                    product.sizeUnit,
-                    product.cost,
-                    product.price,
-                    product.stock,
-                    product.threshold,
-                  ]),
+            void (async () => {
+              const businessName = await getBusinessNameForDownloads();
+              downloadExcel(
+                buildDownloadFilename(businessName, "products", "xlsx"),
+                [
+                  {
+                    name: "Products",
+                    rows: [
+                      [
+                        "name",
+                        "group",
+                        "sku",
+                        "barcode",
+                        "size_value",
+                        "size_unit",
+                        "cost_each",
+                        "sell_each",
+                        "stock_now",
+                        "low_stock_at",
+                      ],
+                      ...items.map((product) => [
+                        product.name,
+                        product.category,
+                        product.sku === "—" ? "" : product.sku,
+                        product.barcode,
+                        product.sizeValue,
+                        product.sizeUnit,
+                        product.cost,
+                        product.price,
+                        product.stock,
+                        product.threshold,
+                      ]),
+                    ],
+                  },
                 ],
-              },
-            ]);
+              );
+            })();
           }}
           type="button"
         >

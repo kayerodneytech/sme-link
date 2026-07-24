@@ -199,7 +199,7 @@ export function InvoicesView() {
         value={query}
       >
         <ExcelExportButton
-          filename="smelink-invoices.xlsx"
+          documentLabel="invoices"
           headers={[
             "Invoice",
             "Issued",

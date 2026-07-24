@@ -64,7 +64,35 @@ export default async function InvoicePage({
 
   return (
     <div className="content invoice-page">
-      <InvoiceToolbar />
+      <InvoiceToolbar
+        invoice={{
+          businessName: business?.name ?? "Business",
+          businessPhone: business?.phone,
+          businessLocation: business?.location,
+          invoiceNumber: number,
+          status: String(invoice.status),
+          issueDate: invoice.issue_date,
+          dueDate: invoice.due_date,
+          paidAt: invoice.paid_at,
+          paymentMethod: invoice.payment_method,
+          currency,
+          notes: invoice.notes,
+          customerName: customer?.name ?? "Customer",
+          customerCompany: customer?.company_name,
+          customerPhone: customer?.phone,
+          customerEmail: customer?.email,
+          customerAddress: [customer?.address, customer?.city]
+            .filter(Boolean)
+            .join(", "),
+          items: items.map((item) => ({
+            description: item.description,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unit_price),
+            lineTotal: Number(item.line_total),
+          })),
+          total: Number(invoice.total),
+        }}
+      />
 
       <article className="card card-pad invoice-sheet">
         <header className="invoice-sheet-head">
