@@ -1,6 +1,7 @@
 "use client";
 
 import { MAX_CURRENCIES, SUPPORTED_CURRENCIES } from "@/lib/cash";
+import { logAppError } from "@/lib/log-app-error";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { ArrowRight, LoaderCircle } from "lucide-react";
@@ -93,6 +94,14 @@ export function OnboardingForm() {
     setLoading(false);
 
     if (rpcError) {
+      void logAppError({
+        source: "onboarding.create_business",
+        message: rpcError.message,
+        details: {
+          code: rpcError.code ?? null,
+          sector: String(form.get("sector") ?? ""),
+        },
+      });
       setError(rpcError.message);
       return;
     }

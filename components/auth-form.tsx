@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { MAX_CURRENCIES, SUPPORTED_CURRENCIES } from "@/lib/cash";
+import { logAppError } from "@/lib/log-app-error";
 import {
   ArrowLeft,
   ArrowRight,
@@ -247,6 +248,16 @@ export function AuthForm() {
           text =
             "Email or password is wrong. If you just registered, wait a moment and try again — or use Forgot password if you have it.";
         }
+        void logAppError({
+          source: "auth.sign_in",
+          message: result.error.message,
+          email: signIn.email,
+          details: {
+            code: result.error.code ?? null,
+            status: result.error.status ?? null,
+            shown_message: text,
+          },
+        });
         setMessage({ type: "error", text });
         return;
       }
@@ -294,16 +305,35 @@ export function AuthForm() {
         text =
           "An account with this email already exists. Switch to Sign in, or delete the old auth user in Supabase if this was a test account.";
       }
+      void logAppError({
+        source: "auth.sign_up",
+        message: result.error.message,
+        email: registration.email,
+        details: {
+          code: result.error.code ?? null,
+          status: result.error.status ?? null,
+          sector: registration.sector,
+          shown_message: text,
+        },
+      });
       setMessage({ type: "error", text });
       return;
     }
 
     if (!result.data.session) {
       setLoading(false);
-      setMessage({
-        type: "error",
-        text: "Account was created, but you are not signed in yet. In Supabase → Authentication → Providers → Email, turn OFF “Confirm email”, then sign in with the same email and password.",
+      const text =
+        "Account was created, but you are not signed in yet. In Supabase → Authentication → Providers → Email, turn OFF “Confirm email”, then sign in with the same email and password.";
+      void logAppError({
+        source: "auth.sign_up.no_session",
+        message: "Signup succeeded without a session (email confirmation likely enabled)",
+        email: registration.email,
+        details: {
+          user_id: result.data.user?.id ?? null,
+          shown_message: text,
+        },
       });
+      setMessage({ type: "error", text });
       return;
     }
 
@@ -315,10 +345,17 @@ export function AuthForm() {
     });
     if (sessionError) {
       setLoading(false);
-      setMessage({
-        type: "error",
-        text: `Account created, but sign-in could not be completed: ${sessionError.message}. Try Sign in with the same email and password.`,
+      const text = `Account created, but sign-in could not be completed: ${sessionError.message}. Try Sign in with the same email and password.`;
+      void logAppError({
+        source: "auth.sign_up.set_session",
+        message: sessionError.message,
+        email: registration.email,
+        details: {
+          user_id: result.data.user?.id ?? null,
+          shown_message: text,
+        },
       });
+      setMessage({ type: "error", text });
       return;
     }
 
@@ -367,10 +404,19 @@ export function AuthForm() {
       });
       if (businessError) {
         setLoading(false);
-        setMessage({
-          type: "error",
-          text: `Account created, but the business workspace could not be set up: ${businessError.message}. Try Sign in — if that fails, turn off Confirm email in Supabase Auth settings.`,
+        const text = `Account created, but the business workspace could not be set up: ${businessError.message}. Try Sign in — if that fails, turn off Confirm email in Supabase Auth settings.`;
+        void logAppError({
+          source: "auth.sign_up.create_business",
+          message: businessError.message,
+          email: registration.email,
+          details: {
+            code: businessError.code ?? null,
+            user_id: result.data.user?.id ?? null,
+            sector: registration.sector,
+            shown_message: text,
+          },
         });
+        setMessage({ type: "error", text });
         return;
       }
     }

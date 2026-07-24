@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AlertTriangle, Home, RotateCcw } from "lucide-react";
 import { useEffect } from "react";
+import { logAppError } from "@/lib/log-app-error";
 
 export default function Error({
   error,
@@ -13,6 +14,14 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error);
+    void logAppError({
+      source: "ui.root_error",
+      message: error.message || "Unknown root error",
+      details: {
+        digest: error.digest ?? null,
+        name: error.name,
+      },
+    });
   }, [error]);
 
   return (
