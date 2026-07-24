@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { isPosEligible } from "@/lib/pos";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
+import { getActiveMembership } from "@/lib/supabase/workspace-cache";
 import { redirect } from "next/navigation";
 
 export default async function WorkspaceLayout({
@@ -13,31 +13,17 @@ export default async function WorkspaceLayout({
     return <AppShell demoMode>{children}</AppShell>;
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const membership = await getActiveMembership();
 
-  if (!user) {
+  if (!membership?.user) {
     redirect("/login");
   }
 
-  const { data: membership } = await supabase
-    .from("business_members")
-    .select("role, businesses(name, location, sector, primary_needs, tracks_inventory, sales_mode)")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) {
+  if (!membership.business) {
     redirect("/onboarding");
   }
 
-  const business = Array.isArray(membership.businesses)
-    ? membership.businesses[0]
-    : membership.businesses;
-
+  const business = membership.business;
   const tracksInventory = Boolean(business?.tracks_inventory);
   const needs = ((business?.primary_needs ?? []) as string[]).filter(
     (need) =>

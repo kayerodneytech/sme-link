@@ -3,6 +3,10 @@
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { MAX_CURRENCIES, SUPPORTED_CURRENCIES } from "@/lib/cash";
+import {
+  getRememberMePreference,
+  setRememberMePreference,
+} from "@/lib/auth/remember-me";
 import { logAppError } from "@/lib/log-app-error";
 import {
   ArrowLeft,
@@ -19,7 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Registration = {
   fullName: string;
@@ -221,6 +225,7 @@ export function AuthForm() {
   const [step, setStep] = useState(1);
   const [registration, setRegistration] = useState(initialRegistration);
   const [signIn, setSignIn] = useState({ email: "", password: "" });
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -228,6 +233,10 @@ export function AuthForm() {
     type: "error" | "success";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    setRememberMe(getRememberMePreference());
+  }, []);
 
   function clearFeedback() {
     setMessage(null);
@@ -379,6 +388,7 @@ export function AuthForm() {
     setLoading(true);
 
     if (mode === "sign-in") {
+      setRememberMePreference(rememberMe);
       const result = await supabase.auth.signInWithPassword({
         email: signIn.email.trim(),
         password: signIn.password,
@@ -494,6 +504,9 @@ export function AuthForm() {
       setMessage({ type: "error", text });
       return;
     }
+
+    // New accounts default to Remember me so the first session lasts 30 days.
+    setRememberMePreference(true);
 
     const { error: sessionError } = await supabase.auth.setSession({
       access_token: result.data.session.access_token,
@@ -664,6 +677,20 @@ export function AuthForm() {
             setShowPassword={setShowPassword}
             showPassword={showPassword}
           />
+          <label className="check-row">
+            <input
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              type="checkbox"
+            />
+            <span>
+              <strong>Remember me for 30 days</strong>
+              <small>
+                Stay signed in on this device. Turn off to sign out when you
+                close the browser.
+              </small>
+            </span>
+          </label>
         </>
       )}
 

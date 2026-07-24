@@ -40,13 +40,21 @@ export async function GET(request: Request) {
       return rates[code] == null && rates[market] == null;
     });
 
-    return NextResponse.json({
-      base: "USD",
-      rates,
-      updatedAt: snapshot.updatedAt,
-      provider: snapshot.provider,
-      missing,
-    });
+    return NextResponse.json(
+      {
+        base: "USD",
+        rates,
+        updatedAt: snapshot.updatedAt,
+        provider: snapshot.provider,
+        missing,
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "public, s-maxage=3600, stale-while-revalidate=86400",
+        },
+      },
+    );
   } catch (error) {
     return NextResponse.json(
       {
