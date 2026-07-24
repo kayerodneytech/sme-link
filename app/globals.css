@@ -1230,6 +1230,63 @@ textarea.input {
   line-height: 1.45;
 }
 
+.status-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 32px 18px;
+}
+
+.status-page-inset {
+  min-height: min(70dvh, 640px);
+  padding: 28px 8px;
+}
+
+.status-card {
+  max-width: 460px;
+  text-align: center;
+}
+
+.status-card h1 {
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  margin: 8px 0 12px;
+}
+
+.status-icon {
+  align-items: center;
+  border-radius: 18px;
+  display: inline-flex;
+  height: 56px;
+  justify-content: center;
+  margin-bottom: 14px;
+  width: 56px;
+}
+
+.status-icon-error {
+  background: color-mix(in srgb, #b42318 12%, white);
+  color: #b42318;
+}
+
+.status-icon-muted {
+  background: var(--surface-2, #f3f4f6);
+  color: var(--muted);
+}
+
+.status-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin: 0 0 18px;
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
 .action-warning {
   background: var(--amber-soft);
   color: var(--amber);

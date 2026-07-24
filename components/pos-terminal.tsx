@@ -2,8 +2,13 @@
 
 import {
   calculateChange,
+  roundMoney,
   splitVatInclusive,
 } from "@/lib/calculations";
+import {
+  convertAmount,
+  formatRateLabel,
+} from "@/lib/exchange-rates";
 import { formatMoney } from "@/lib/format";
 import { formatProductSize, productLabel } from "@/lib/product-label";
 import { createClient } from "@/lib/supabase/client";
@@ -32,6 +37,7 @@ type Product = {
   sku: string;
   barcode: string;
   category: string;
+  /** Selling price in the business primary currency. */
   price: number;
   stock: number;
   unit: string;
@@ -41,7 +47,7 @@ type CartLine = Product & { quantity: number };
 type Receipt = {
   number: string;
   date: string;
-  lines: CartLine[];
+  lines: (CartLine & { chargedPrice: number })[];
   net: number;
   vat: number;
   vatRate: number;
@@ -50,6 +56,7 @@ type Receipt = {
   paymentMethod: string;
   cashReceived: number | null;
   change: number | null;
+  rateLabel: string | null;
 };
 
 export function PosTerminal({
@@ -82,6 +89,9 @@ export function PosTerminal({
   const [paying, setPaying] = useState(false);
   const [message, setMessage] = useState("");
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
+  const [ratesUpdatedAt, setRatesUpdatedAt] = useState<string | null>(null);
+  const [ratesError, setRatesError] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -128,6 +138,52 @@ export function PosTerminal({
   }, [businessId]);
 
   useEffect(() => {
+    const codes = Array.from(
+      new Set([
+        primaryCurrency,
+        ...(currencies.length > 0 ? currencies : [primaryCurrency]),
+      ]),
+    );
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/exchange-rates?currencies=${codes.join(",")}`,
+        );
+        const payload = (await response.json()) as {
+          rates?: Record<string, number>;
+          updatedAt?: string;
+          missing?: string[];
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Could not load exchange rates.");
+        }
+        if (cancelled) return;
+        setRates(payload.rates ?? { USD: 1 });
+        setRatesUpdatedAt(payload.updatedAt ?? null);
+        if (payload.missing?.length) {
+          setRatesError(
+            `No live rate for ${payload.missing.join(", ")}. Those sales stay 1:1 until a rate is available.`,
+          );
+        } else {
+          setRatesError("");
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setRatesError(
+          error instanceof Error
+            ? error.message
+            : "Exchange rates could not be loaded.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currencies, primaryCurrency]);
+
+  useEffect(() => {
     function shortcuts(event: KeyboardEvent) {
       if (event.key === "/" && document.activeElement !== searchRef.current) {
         event.preventDefault();
@@ -146,6 +202,25 @@ export function PosTerminal({
     return () => window.removeEventListener("keydown", shortcuts);
   });
 
+  function priceInCurrency(basePrice: number, targetCurrency = currency) {
+    if (targetCurrency === primaryCurrency) return roundMoney(basePrice);
+    const converted = convertAmount(
+      basePrice,
+      primaryCurrency,
+      targetCurrency,
+      rates,
+    );
+    return converted ?? roundMoney(basePrice);
+  }
+
+  const rateLabel = useMemo(
+    () =>
+      currency === primaryCurrency
+        ? null
+        : formatRateLabel(rates, primaryCurrency, currency),
+    [currency, primaryCurrency, rates],
+  );
+
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(products.map((product) => product.category)))],
     [products],
@@ -159,7 +234,10 @@ export function PosTerminal({
         .includes(term);
     return matches && (category === "All" || product.category === category);
   });
-  const total = cart.reduce((sum, line) => sum + line.price * line.quantity, 0);
+  const total = cart.reduce(
+    (sum, line) => sum + priceInCurrency(line.price) * line.quantity,
+    0,
+  );
   const tax = splitVatInclusive(total, vatRegistered, vatRate);
   const cashValue = Number(cashReceived);
   const changeDue =
@@ -230,6 +308,10 @@ export function PosTerminal({
     setPaying(true);
     setMessage("");
     const supabase = createClient();
+    const chargedLines = cart.map((line) => ({
+      ...line,
+      chargedPrice: priceInCurrency(line.price),
+    }));
     try {
       const { data: sale, error: saleError } = await supabase
         .from("sales")
@@ -243,11 +325,11 @@ export function PosTerminal({
         .single();
       if (saleError) throw saleError;
       const { error: itemsError } = await supabase.from("sale_items").insert(
-        cart.map((line) => ({
+        chargedLines.map((line) => ({
           sale_id: sale.id,
           product_id: line.id,
           quantity: line.quantity,
-          unit_price: line.price,
+          unit_price: line.chargedPrice,
         })),
       );
       if (itemsError) throw itemsError;
@@ -260,7 +342,7 @@ export function PosTerminal({
       setReceipt({
         number: `SL-${String(sale.sale_number).padStart(4, "0")}`,
         date: sale.created_at,
-        lines: cart,
+        lines: chargedLines,
         net: breakdown.net,
         vat: breakdown.vat,
         vatRate: breakdown.rate,
@@ -269,6 +351,7 @@ export function PosTerminal({
         paymentMethod,
         cashReceived: paymentMethod === "cash" ? cashValue : null,
         change: paymentMethod === "cash" ? calculateChange(total, cashValue) : null,
+        rateLabel,
       });
       setProducts((current) =>
         current.map((product) => {
@@ -363,7 +446,7 @@ export function PosTerminal({
                     : product.sku || product.category}
                 </small>
                 <div>
-                  <b>{formatMoney(product.price, currency)}</b>
+                  <b>{formatMoney(priceInCurrency(product.price), currency)}</b>
                   <span>
                     {product.stock} {product.unit}
                   </span>
@@ -401,7 +484,9 @@ export function PosTerminal({
               <article className="pos-cart-line" key={line.id}>
                 <div>
                   <strong>{line.label}</strong>
-                  <small>{formatMoney(line.price, currency)} each</small>
+                  <small>
+                    {formatMoney(priceInCurrency(line.price), currency)} each
+                  </small>
                 </div>
                 <div className="pos-quantity">
                   <button onClick={() => changeQuantity(line.id, -1)} type="button">
@@ -412,7 +497,12 @@ export function PosTerminal({
                     <Plus size={14} />
                   </button>
                 </div>
-                <b>{formatMoney(line.price * line.quantity, currency)}</b>
+                <b>
+                  {formatMoney(
+                    priceInCurrency(line.price) * line.quantity,
+                    currency,
+                  )}
+                </b>
               </article>
             ))}
             {!cart.length && (
@@ -455,6 +545,17 @@ export function PosTerminal({
                     </option>
                   ))}
                 </select>
+                {rateLabel && (
+                  <p className="field-hint">
+                    Live rate · {rateLabel}
+                    {ratesUpdatedAt ? ` · updated ${ratesUpdatedAt}` : ""}
+                  </p>
+                )}
+                {ratesError && (
+                  <p className="field-hint" style={{ color: "#B42318" }}>
+                    {ratesError}
+                  </p>
+                )}
               </div>
               <div className="field">
                 <label htmlFor="pos-payment">Payment</label>
@@ -557,14 +658,21 @@ export function PosTerminal({
                 {receipt.number} · {new Date(receipt.date).toLocaleString()}
               </p>
               <p className="receipt-meta">
-                Paid by {receipt.paymentMethod.replace("_", " ")} · {receipt.currency}
+                Paid by {receipt.paymentMethod.replace("_", " ")} ·{" "}
+                {receipt.currency}
+                {receipt.rateLabel ? ` · ${receipt.rateLabel}` : ""}
               </p>
               {receipt.lines.map((line) => (
                 <div key={line.id}>
                   <span>
                     {line.quantity} × {line.label}
                   </span>
-                  <b>{formatMoney(line.price * line.quantity, receipt.currency)}</b>
+                  <b>
+                    {formatMoney(
+                      line.chargedPrice * line.quantity,
+                      receipt.currency,
+                    )}
+                  </b>
                 </div>
               ))}
               <div className="receipt-breakdown">

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
+import { MAX_CURRENCIES, SUPPORTED_CURRENCIES } from "@/lib/cash";
 import {
   ArrowLeft,
   ArrowRight,
@@ -147,6 +148,13 @@ export function AuthForm() {
           cashOpenings,
           currency: current.currency === value ? currencies[0] : current.currency,
         };
+      }
+      if (current.currencies.length >= MAX_CURRENCIES) {
+        setMessage({
+          type: "error",
+          text: `You can accept at most ${MAX_CURRENCIES} currencies.`,
+        });
+        return current;
       }
       return {
         ...current,
@@ -387,9 +395,9 @@ export function AuthForm() {
             <span><strong>We keep products in stock</strong><small>Turn this off for service businesses — you’ll manage services, not products.</small></span>
           </label>
           <div className="field">
-            <label>Which currencies do you accept?</label>
+            <label>Which currencies do you accept? (max {MAX_CURRENCIES})</label>
             <div className="need-grid">
-              {["USD", "ZIG", "ZAR"].map((currency) => {
+              {SUPPORTED_CURRENCIES.map((currency) => {
                 const selected = registration.currencies.includes(currency);
                 return (
                   <button aria-pressed={selected} className="need-option" data-active={selected} key={currency} onClick={() => toggleCurrency(currency)} type="button">

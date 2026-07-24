@@ -1,6 +1,6 @@
 "use client";
 
-import { SUPPORTED_CURRENCIES } from "@/lib/cash";
+import { MAX_CURRENCIES, SUPPORTED_CURRENCIES } from "@/lib/cash";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { ArrowRight, LoaderCircle } from "lucide-react";
@@ -33,6 +33,10 @@ export function OnboardingForm() {
         });
         if (primaryCurrency === code) setPrimaryCurrency(next[0]);
         return next;
+      }
+      if (current.length >= MAX_CURRENCIES) {
+        setError(`You can accept at most ${MAX_CURRENCIES} currencies.`);
+        return current;
       }
       setCashOpenings((openings) => ({
         ...openings,
@@ -128,7 +132,7 @@ export function OnboardingForm() {
           </select>
         </div>
         <fieldset className="field">
-          <legend>Accepted currencies</legend>
+          <legend>Accepted currencies (max {MAX_CURRENCIES})</legend>
           {SUPPORTED_CURRENCIES.map((code) => (
             <label key={code}>
               <input

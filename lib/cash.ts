@@ -1,8 +1,23 @@
 import { roundMoney } from "./calculations";
 
 export const STOCK_PURCHASES_CATEGORY = "Stock purchases";
+
+/** Suggested currencies shown as quick picks in settings / signup. */
 export const SUPPORTED_CURRENCIES = ["USD", "ZIG", "ZAR"] as const;
 export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
+
+/** A business can accept at most this many currencies. */
+export const MAX_CURRENCIES = 3;
+
+const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
+
+export function normalizeCurrencyCode(value: string) {
+  return value.trim().toUpperCase();
+}
+
+export function isValidCurrencyCode(value: string) {
+  return CURRENCY_CODE_PATTERN.test(normalizeCurrencyCode(value));
+}
 
 export type CashAccountBalance = {
   currency: string;

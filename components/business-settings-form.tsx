@@ -1,11 +1,16 @@
 "use client";
 
-import { SUPPORTED_CURRENCIES } from "@/lib/cash";
+import {
+  isValidCurrencyCode,
+  MAX_CURRENCIES,
+  normalizeCurrencyCode,
+  SUPPORTED_CURRENCIES,
+} from "@/lib/cash";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { getCurrentBusinessId } from "@/lib/supabase/workspace";
 import { sectorLabel } from "@/lib/sectors";
-import { Check, LoaderCircle, Save } from "lucide-react";
+import { Check, LoaderCircle, Plus, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Business = {
@@ -60,6 +65,7 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
     },
   );
   const [lockedCurrencies, setLockedCurrencies] = useState<string[]>([]);
+  const [customCurrency, setCustomCurrency] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -128,12 +134,39 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
       });
       if (primaryCurrency === currency) setPrimaryCurrency(next[0]);
     } else {
+      if (currencies.length >= MAX_CURRENCIES) {
+        setMessage(`You can accept at most ${MAX_CURRENCIES} currencies.`);
+        return;
+      }
       setCurrencies([...currencies, currency]);
       setCashOpenings((current) => ({
         ...current,
         [currency]: current[currency] ?? "0",
       }));
     }
+  }
+
+  function addCustomCurrency() {
+    const code = normalizeCurrencyCode(customCurrency);
+    if (!isValidCurrencyCode(code)) {
+      setMessage("Enter a valid 3-letter currency code (e.g. EUR, GBP, BWP).");
+      return;
+    }
+    if (currencies.includes(code)) {
+      setMessage(`${code} is already enabled.`);
+      return;
+    }
+    if (currencies.length >= MAX_CURRENCIES) {
+      setMessage(`You can accept at most ${MAX_CURRENCIES} currencies.`);
+      return;
+    }
+    setCurrencies([...currencies, code]);
+    setCashOpenings((current) => ({
+      ...current,
+      [code]: current[code] ?? "0",
+    }));
+    setCustomCurrency("");
+    setMessage(`${code} added. Save changes to keep it.`);
   }
 
   function toggleNeed(need: string) {
@@ -456,13 +489,20 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
           <div>
             <h2>Currencies & cash</h2>
             <p>
-              Each currency is a separate cash account. Sales and expenses only
-              affect the currency you choose for that transaction.
+              Accept up to {MAX_CURRENCIES} currencies. Each is a separate cash
+              account. On POS, prices convert from your main currency using live
+              exchange rates.
             </p>
           </div>
         </div>
         <div className="need-grid currency-grid">
-          {SUPPORTED_CURRENCIES.map((currency) => {
+          {[
+            ...SUPPORTED_CURRENCIES,
+            ...currencies.filter(
+              (code) =>
+                !(SUPPORTED_CURRENCIES as readonly string[]).includes(code),
+            ),
+          ].map((currency) => {
             const active = currencies.includes(currency);
             const locked = lockedCurrencies.includes(currency);
             return (
@@ -487,6 +527,33 @@ export function BusinessSettingsForm({ business }: { business: Business }) {
               </button>
             );
           })}
+        </div>
+        <div className="field" style={{ marginTop: 14 }}>
+          <label htmlFor="custom-currency">Add another currency</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              className="input"
+              id="custom-currency"
+              maxLength={3}
+              onChange={(event) =>
+                setCustomCurrency(event.target.value.toUpperCase())
+              }
+              placeholder="e.g. EUR"
+              value={customCurrency}
+            />
+            <button
+              className="button button-secondary"
+              disabled={currencies.length >= MAX_CURRENCIES}
+              onClick={addCustomCurrency}
+              type="button"
+            >
+              <Plus size={16} /> Add
+            </button>
+          </div>
+          <p className="field-hint">
+            Use a standard 3-letter code. Maximum {MAX_CURRENCIES} currencies.
+            Live rates come from open.er-api.com (ZiG uses the ZWG market rate).
+          </p>
         </div>
         <p className="field-hint">
           A currency cannot be turned off once it has transactions or a starting
