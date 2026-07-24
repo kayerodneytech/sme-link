@@ -272,9 +272,14 @@ export function InventoryView() {
       setGroupName("");
       setMessage(`Added “${name}”.`);
     } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "The group could not be saved.",
-      );
+      const text =
+        error instanceof Error ? error.message : "The group could not be saved.";
+      void logAppError({
+        source: "inventory.add_product_category",
+        message: text,
+        details: { name },
+      });
+      setMessage(text);
     }
   }
 
